@@ -123,10 +123,17 @@ def verify_evidence(envelope: dict, fields: dict) -> dict:
     verified_observations = []
     for obs in envelope.get("observations", []):
         obs = dict(obs)
-        evidence = obs.get("evidence") or {}
-        quote = evidence.get("quote")
-        field_value = fields.get(evidence.get("field"))
-        obs["evidence_verified"] = bool(quote) and isinstance(field_value, str) and quote in field_value
+        evidence = obs.get("evidence")
+        if isinstance(evidence, dict):
+            quote = evidence.get("quote")
+            field_value = fields.get(evidence.get("field"))
+            obs["evidence_verified"] = (
+                bool(quote) and isinstance(field_value, str) and quote in field_value
+            )
+        else:
+            # evidence가 없거나 dict가 아니면(문자열·리스트·bool 등 오염된 응답)
+            # 검증 불가로 보고 False. raise하지 않고 다른 key/attribute는 보존한다.
+            obs["evidence_verified"] = False
         verified_observations.append(obs)
     result = dict(envelope)
     result["observations"] = verified_observations
@@ -185,6 +192,10 @@ def enrich_story(client, conn: sqlite3.Connection, story_id: str, title: str, te
     """story 하나를 처리해 story_extractions에 저장한다. 반환값은 최종 status."""
     stable_input, norm_text = normalize_story_text(title, text)
 
+    # API/transport 실패 → failed. parse/shape 실패 → invalid_json.
+    # 그 외 예상 못한 예외도 failed로 기록한다. 어떤 경로든 반드시 정확히 한 개의
+    # story_extractions 행을 남겨, pending_story_ids가 같은 story를 매 실행마다
+    # 다시 골라 API에 재청구하는 무한 재처리를 막는다.
     try:
         resp = client.messages.create(
             model=EXTRACTION_MODEL,
@@ -193,14 +204,15 @@ def enrich_story(client, conn: sqlite3.Connection, story_id: str, title: str, te
             messages=[{"role": "user", "content": USER_TEMPLATE.format(**stable_input)}],
         )
         raw = resp.content[0].text
-    except Exception as exc:  # API/transport 실패는 개별 skip하고 failed로 기록
+    except Exception as exc:  # API/transport 실패
         save_extraction(conn, build_record(story_id, stable_input, norm_text, "failed", None, None, str(exc)))
         return "failed"
 
     try:
         envelope = parse_envelope(raw)
         verified = verify_evidence(envelope, stable_input)
-    except ValueError as exc:
+    except (ValueError, TypeError, KeyError, AttributeError) as exc:
+        # 파싱은 됐지만 envelope/observation 모양이 오염된 응답(비-dict evidence 등)
         save_extraction(
             conn, build_record(story_id, stable_input, norm_text, "invalid_json", raw, None, str(exc))
         )
@@ -239,8 +251,18 @@ def main() -> None:
         row = conn.execute("SELECT title, text FROM stories WHERE id = ?", (story_id,)).fetchone()
         try:
             status = enrich_story(client, conn, story_id, row["title"], row["text"])
-        except Exception:  # 예상 못한 개별 실패도 전체 실행을 막지 않는다
+        except Exception as exc:  # 예상 못한 개별 실패도 전체 실행을 막지 않는다
+            # backstop: enrich_story가 저장 전에 터진 경우라도 반드시 failed 행을
+            # 남겨 무한 재처리를 막는다. 저장까지 실패하면 그때만 카운터만 올린다.
             status = "failed"
+            try:
+                stable_input, norm_text = normalize_story_text(row["title"], row["text"])
+                save_extraction(
+                    conn,
+                    build_record(story_id, stable_input, norm_text, "failed", None, None, str(exc)),
+                )
+            except Exception:
+                pass
         counts[status] += 1
         print(f"  [{i}/{len(story_ids)}] {status.upper()}  {(row['title'] or '')[:60]}")
         time.sleep(0.2)  # 예의상 간격
