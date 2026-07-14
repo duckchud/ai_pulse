@@ -1,0 +1,7 @@
+anthropic>=0.50,<1
+beautifulsoup4>=4.12,<5
+networkx>=3.2,<4
+notebook>=7,<8
+pandas>=2.2,<3
+pytest>=8,<9
+requests>=2.31,<3
