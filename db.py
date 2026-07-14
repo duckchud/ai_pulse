@@ -160,10 +160,14 @@ def save_extraction(conn: sqlite3.Connection, record: dict) -> None:
 
 
 def latest_successful_extractions(conn: sqlite3.Connection) -> pd.DataFrame:
+    # 최신 enriched_at이 우선, 동률이면 rowid DESC(가장 나중에 쓰인 레코드)로
+    # 결정적으로 정렬한다. drop_duplicates(keep="first")는 입력 순서를 보존하므로
+    # SQL 정렬만으로 story별 승자가 확정된다.
     df = pd.read_sql_query(
-        "SELECT * FROM story_extractions WHERE status = 'succeeded'", conn
+        "SELECT * FROM story_extractions WHERE status = 'succeeded' "
+        "ORDER BY enriched_at DESC, rowid DESC",
+        conn,
     )
     if df.empty:
         return df
-    df = df.sort_values("enriched_at", ascending=False)
     return df.drop_duplicates(subset="story_id", keep="first").reset_index(drop=True)
