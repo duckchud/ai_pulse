@@ -1,6 +1,6 @@
 import json
 
-from analysis import emerging_models, model_cooccurrence, model_framing_sentiment
+from analysis import emerging_models, model_cooccurrence, model_framing_sentiment, review_sample
 from db import save_extraction
 from reference_data import import_catalog
 
@@ -160,3 +160,18 @@ def test_all_gold_functions_return_empty_dataframe_with_columns_when_no_data(tem
     assert framing.empty
     assert {"stance", "story_count", "as_of", "collection_query_version", "prompt_version",
             "catalog_version"} <= set(framing.columns)
+
+
+def test_review_sample_is_reproducible(temporary_db):
+    first = review_sample(temporary_db, sample_size=30, seed=20260714)
+    second = review_sample(temporary_db, sample_size=30, seed=20260714)
+    assert first["story_id"].tolist() == second["story_id"].tolist()
+
+
+def test_review_sample_handles_fewer_rows_than_sample_size(temporary_db):
+    _insert_story(temporary_db, "story-1", created_at_i=1784023200, keywords="title-only")
+    _save(temporary_db, "story-1", [{"surface": "GPT-5", "evidence_verified": True, "attributes": {}}])
+    first = review_sample(temporary_db, sample_size=30, seed=20260714)
+    second = review_sample(temporary_db, sample_size=30, seed=20260714)
+    assert first["story_id"].tolist() == ["story-1"]
+    assert first["story_id"].tolist() == second["story_id"].tolist()

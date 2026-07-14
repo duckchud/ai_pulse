@@ -16,6 +16,7 @@ import pandas as pd
 
 from config import PROMPT_VERSION
 from db import latest_successful_extractions
+from enrich import normalize_story_text
 from reference_data import resolve_model
 
 _EMERGING_COLUMNS = [
@@ -41,6 +42,17 @@ _OBSERVATION_COLUMNS = [
     "story_id", "surface", "resolution_status", "vendor", "family", "version",
     "model_id", "attributes", "prompt_version", "created_at_i", "points",
     "num_comments", "collection_query_version",
+]
+
+_REVIEW_COLUMNS = [
+    "story_id", "title", "normalized_text", "parsed_json",
+    "is_relevant", "expected_mentions", "extracted_mentions", "evidence_valid",
+    "family_version_mapping_valid", "stance_valid", "error_type", "reviewer_notes",
+]
+
+_REVIEWER_FILL_COLUMNS = [
+    "is_relevant", "expected_mentions", "extracted_mentions", "evidence_valid",
+    "family_version_mapping_valid", "stance_valid", "error_type", "reviewer_notes",
 ]
 
 
@@ -364,3 +376,48 @@ def model_framing_sentiment(
     for key, value in meta.items():
         result[key] = value
     return result[_FRAMING_COLUMNS]
+
+
+def review_sample(conn: sqlite3.Connection, sample_size: int, seed: int) -> pd.DataFrame:
+    """수동 정확도 검토용 고정 시드 표본을 성공한 최신 extraction에서 뽑는다.
+
+    title-only story(text 없음)와 self-post(text 있음)를 모두 있으면 포함하도록
+    두 그룹으로 나눠 sample_size를 절반씩 배분하고(한쪽이 없으면 전량을 다른
+    쪽에 배분), 그룹별 표본과 최종 순서 셔플을 모두 `random_state=seed`로
+    고정한다 — 같은 seed는 항상 같은 story_id 순서를 반환한다. 그룹 표본 수는
+    실제 보유량으로 캡되므로(부족해도 죽지 않음) sample_size보다 적게 돌아올
+    수 있다. 쓰기·부수효과 없음(Gold는 읽기 전용을 유지).
+    """
+    extractions = latest_successful_extractions(conn)
+    if extractions.empty:
+        return pd.DataFrame(columns=_REVIEW_COLUMNS)
+
+    stories = pd.read_sql_query("SELECT id AS story_id, title, text FROM stories", conn)
+    merged = extractions.merge(stories, on="story_id", how="left")
+    has_text = merged["text"].fillna("").str.strip() != ""
+    title_only, self_post = merged[~has_text], merged[has_text]
+
+    if title_only.empty:
+        quota_title_only, quota_self_post = 0, sample_size
+    elif self_post.empty:
+        quota_title_only, quota_self_post = sample_size, 0
+    else:
+        quota_title_only = sample_size // 2
+        quota_self_post = sample_size - quota_title_only
+
+    picked = pd.concat(
+        [
+            title_only.sample(n=min(quota_title_only, len(title_only)), random_state=seed),
+            self_post.sample(n=min(quota_self_post, len(self_post)), random_state=seed),
+        ]
+    )
+    if picked.empty:
+        return pd.DataFrame(columns=_REVIEW_COLUMNS)
+    picked = picked.sample(frac=1, random_state=seed).reset_index(drop=True)
+
+    picked["normalized_text"] = picked.apply(
+        lambda row: normalize_story_text(row["title"] or "", row["text"] or "")[1], axis=1
+    )
+    for col in _REVIEWER_FILL_COLUMNS:
+        picked[col] = None
+    return picked[_REVIEW_COLUMNS]
