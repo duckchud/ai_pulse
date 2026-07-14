@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS stories (
     created_at_i     INTEGER,
     text             TEXT,
     matched_keywords TEXT,
-    fetched_at       TEXT NOT NULL
+    fetched_at       TEXT NOT NULL,
+    collection_query_version TEXT NOT NULL DEFAULT 'legacy'
 );
 CREATE INDEX IF NOT EXISTS idx_stories_created ON stories(created_at_i);
 
@@ -85,6 +86,12 @@ def connect(path: str | Path) -> sqlite3.Connection:
 
 def migrate(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(stories)")}
+    if "collection_query_version" not in columns:
+        conn.execute(
+            "ALTER TABLE stories ADD COLUMN collection_query_version "
+            "TEXT NOT NULL DEFAULT 'legacy'"
+        )
     conn.commit()
 
 
@@ -109,10 +116,12 @@ def upsert_stories(conn: sqlite3.Connection, rows) -> None:
         """
         INSERT INTO stories (
             id, source, title, url, author, points, num_comments,
-            created_at, created_at_i, text, matched_keywords, fetched_at
+            created_at, created_at_i, text, matched_keywords, fetched_at,
+            collection_query_version
         ) VALUES (
             :id, :source, :title, :url, :author, :points, :num_comments,
-            :created_at, :created_at_i, :text, :matched_keywords, :fetched_at
+            :created_at, :created_at_i, :text, :matched_keywords, :fetched_at,
+            :collection_query_version
         )
         ON CONFLICT(id) DO UPDATE SET
             title = excluded.title,
@@ -124,7 +133,8 @@ def upsert_stories(conn: sqlite3.Connection, rows) -> None:
             created_at_i = excluded.created_at_i,
             text = excluded.text,
             matched_keywords = excluded.matched_keywords,
-            fetched_at = excluded.fetched_at
+            fetched_at = excluded.fetched_at,
+            collection_query_version = excluded.collection_query_version
         """,
         rows,
     )
