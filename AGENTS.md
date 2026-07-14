@@ -35,6 +35,8 @@ pytest -q                         # Run offline tests
 Set `ANTHROPIC_API_KEY` only when running enrichment. `ai_monitor.db` is local runtime
 data and must never be committed.
 
+See `README.md` for the full local execution checklist and the latest smoke-test results.
+
 ## Coding Style & Data Rules
 
 Use Python 3.11+, four-space indentation, `snake_case` functions, and `UPPER_CASE`
