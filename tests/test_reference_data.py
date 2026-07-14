@@ -81,3 +81,49 @@ def test_import_catalog_rejects_alias_mapping_to_two_models(tmp_path, temporary_
 
 def test_resolve_model_returns_none_for_unresolved_surface(temporary_db):
     assert resolve_model(temporary_db, "totally unknown model") is None
+
+
+def test_import_catalog_is_idempotent_on_reimport(tmp_path, temporary_db):
+    # 큐레이터가 같은 카탈로그 파일을 다시 임포트하는 현실 워크플로: 예외 없이
+    # 파일 내용으로 수렴하고, 중복 행이 생기지 않으며, 별칭 해석도 유지된다.
+    path = tmp_path / "catalog.json"
+    path.write_text(
+        '[{"model_id":"vendor:family:1","vendor":"Vendor","family":"Family",'
+        '"version":"1","released_on":"2026-01-01",'
+        '"release_source_url":"https://vendor.example/release",'
+        '"catalog_version":"v1","aliases":["Family 1"]}]'
+    )
+    assert import_catalog(temporary_db, path) == 1
+    # 두 번째 임포트도 성공하고 같은 count를 반환한다.
+    assert import_catalog(temporary_db, path) == 1
+
+    count = temporary_db.execute("SELECT COUNT(*) AS n FROM model_catalog").fetchone()["n"]
+    assert count == 1
+    alias_count = temporary_db.execute("SELECT COUNT(*) AS n FROM model_aliases").fetchone()["n"]
+    assert alias_count == 1
+    assert resolve_model(temporary_db, "family-1")["model_id"] == "vendor:family:1"
+
+
+def test_reimport_reassigning_alias_to_different_model_still_raises(tmp_path, temporary_db):
+    # 별칭이 다른 model_id로 재할당되면 idempotency가 이를 삼키지 않고 여전히 raise.
+    first = tmp_path / "first.json"
+    first.write_text(
+        '[{"model_id":"vendor:family:1","vendor":"Vendor","family":"Family",'
+        '"version":"1","released_on":null,'
+        '"release_source_url":"https://vendor.example/release1",'
+        '"catalog_version":"v1","aliases":["Shared Alias"]}]'
+    )
+    assert import_catalog(temporary_db, first) == 1
+
+    second = tmp_path / "second.json"
+    second.write_text(
+        '[{"model_id":"vendor:family:2","vendor":"Vendor","family":"Family",'
+        '"version":"2","released_on":null,'
+        '"release_source_url":"https://vendor.example/release2",'
+        '"catalog_version":"v1","aliases":["Shared Alias"]}]'
+    )
+    with pytest.raises(Exception):
+        import_catalog(temporary_db, second)
+
+    # 기존 매핑은 그대로 유지된다.
+    assert resolve_model(temporary_db, "shared alias")["model_id"] == "vendor:family:1"

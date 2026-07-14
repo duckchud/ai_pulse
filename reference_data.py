@@ -46,6 +46,13 @@ def import_catalog(conn: sqlite3.Connection, path: str | Path) -> int:
                     model_id, vendor, family, version, released_on,
                     release_source_url, catalog_version
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(model_id) DO UPDATE SET
+                    vendor = excluded.vendor,
+                    family = excluded.family,
+                    version = excluded.version,
+                    released_on = excluded.released_on,
+                    release_source_url = excluded.release_source_url,
+                    catalog_version = excluded.catalog_version
                 """,
                 (
                     record["model_id"],
@@ -69,8 +76,12 @@ def import_catalog(conn: sqlite3.Connection, path: str | Path) -> int:
                         f"alias '{normalized}' already resolves to {existing['model_id']}, "
                         f"cannot also map to {record['model_id']}"
                     )
+                # 같은 model_id로의 재매핑은 무해한 no-op(재실행 대비 idempotent).
+                # 다른 model_id로의 재할당은 위 pre-check에서 이미 raise되므로 여기
+                # ON CONFLICT 경로에는 model_id가 바뀌지 않는 경우만 도달한다.
                 conn.execute(
-                    "INSERT OR IGNORE INTO model_aliases (alias_normalized, model_id) VALUES (?, ?)",
+                    "INSERT INTO model_aliases (alias_normalized, model_id) VALUES (?, ?) "
+                    "ON CONFLICT(alias_normalized) DO UPDATE SET model_id = excluded.model_id",
                     (normalized, record["model_id"]),
                 )
 
