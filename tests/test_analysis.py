@@ -143,6 +143,43 @@ def test_model_framing_sentiment_filters_by_model_id(temporary_db, tmp_path):
     assert frame.iloc[0]["stance"] == "excited"
 
 
+def test_model_framing_sentiment_preserves_distinct_stances_for_same_group(temporary_db, tmp_path):
+    # 한 story가 같은 (vendor/family) 그룹에 대해 서로 다른 stance 두 개를 담으면
+    # 두 stance 행이 각각 살아남아야 한다(story-count 1씩) — 합쳐지지 않는다.
+    _import_catalog(temporary_db, tmp_path, [{
+        "model_id": "openai:gpt:5", "vendor": "OpenAI", "family": "GPT", "version": "5",
+        "released_on": "2026-01-01", "release_source_url": "https://openai.example/gpt5",
+        "catalog_version": "v1", "aliases": ["GPT-5", "GPT 5 Pro"],
+    }])
+    _insert_story(temporary_db, "story-1", created_at_i=1784023200)
+    _save(temporary_db, "story-1", [
+        {"surface": "GPT-5", "evidence_verified": True, "attributes": {"stance": "impressed-by-latency"}},
+        {"surface": "GPT 5 Pro", "evidence_verified": True, "attributes": {"stance": "worried-about-cost"}},
+    ])
+    frame = model_framing_sentiment(temporary_db, as_of="2026-07-14T12:00:00Z", group_level="family")
+    assert set(frame["stance"]) == {"impressed-by-latency", "worried-about-cost"}
+    assert frame["story_count"].tolist() == [1, 1]
+
+
+def test_model_framing_sentiment_collapses_duplicate_stance_for_same_group(temporary_db, tmp_path):
+    # 같은 story·같은 그룹·같은 stance인 observation 두 개는 한 행으로 접히고
+    # story-count는 1이어야 한다(중복 이중집계 방지).
+    _import_catalog(temporary_db, tmp_path, [{
+        "model_id": "openai:gpt:5", "vendor": "OpenAI", "family": "GPT", "version": "5",
+        "released_on": "2026-01-01", "release_source_url": "https://openai.example/gpt5",
+        "catalog_version": "v1", "aliases": ["GPT-5", "GPT 5 Pro"],
+    }])
+    _insert_story(temporary_db, "story-1", created_at_i=1784023200)
+    _save(temporary_db, "story-1", [
+        {"surface": "GPT-5", "evidence_verified": True, "attributes": {"stance": "excited"}},
+        {"surface": "GPT 5 Pro", "evidence_verified": True, "attributes": {"stance": "excited"}},
+    ])
+    frame = model_framing_sentiment(temporary_db, as_of="2026-07-14T12:00:00Z", group_level="family")
+    assert len(frame) == 1
+    assert frame.iloc[0]["stance"] == "excited"
+    assert frame.iloc[0]["story_count"] == 1
+
+
 def test_all_gold_functions_return_empty_dataframe_with_columns_when_no_data(temporary_db):
     emerging = emerging_models(temporary_db, as_of="2026-07-14T12:00:00Z", group_level="family")
     cooc = model_cooccurrence(temporary_db, as_of="2026-07-14T12:00:00Z", group_level="family")
