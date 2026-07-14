@@ -157,7 +157,7 @@ def main() -> None:
     migrate(conn)
     session = make_session()
 
-    if args.backfill:
+    if args.backfill is not None:
         since_ts = int(
             (datetime.now(timezone.utc) - timedelta(days=args.backfill)).timestamp()
         )
