@@ -4,6 +4,18 @@ import enrich
 from enrich import enrich_story, parse_envelope, verify_evidence
 
 
+def test_build_record_accepts_explicit_session_model():
+    stable_input = {"title": "Qwen3 release", "text": "body"}
+
+    record = enrich.build_record(
+        "story-1", stable_input, "body", "succeeded", "raw", "{}", None,
+        prompt_version="schema-free-v1", model="codex-session-v1",
+    )
+
+    assert record["prompt_version"] == "schema-free-v1"
+    assert record["model"] == "codex-session-v1"
+
+
 def test_verify_evidence_marks_exact_title_quote_verified():
     envelope = {"relevant": True, "observations": [{"surface": "Qwen3", "evidence": {"field": "title", "quote": "Qwen3 release"}, "attributes": {}}], "extensions": {}}
     verified = verify_evidence(envelope, {"title": "Qwen3 release announced", "text": ""})

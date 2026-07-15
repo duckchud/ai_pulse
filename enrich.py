@@ -172,11 +172,13 @@ def build_record(
     raw_response: str | None,
     parsed_json: str | None,
     error_message: str | None,
+    prompt_version: str = PROMPT_VERSION,
+    model: str = EXTRACTION_MODEL,
 ) -> dict:
     return {
         "story_id": story_id,
-        "prompt_version": PROMPT_VERSION,
-        "model": EXTRACTION_MODEL,
+        "prompt_version": prompt_version,
+        "model": model,
         "status": status,
         "raw_response": raw_response,
         "parsed_json": parsed_json,

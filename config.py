@@ -7,6 +7,8 @@ OVERLAP_SECONDS = 7_200
 COLLECTION_QUERY_VERSION = "v1"
 PROMPT_VERSION = "schema-free-v1"
 EXTRACTION_MODEL = "claude-haiku-4-5-20251001"
+SESSION_EXTRACTION_MODEL = "codex-session-v1"
+SESSION_BATCH_LIMIT = 5
 
 BROAD_KEYWORDS = ["artificial intelligence", "LLM", "machine learning", "AI agent"]
 TRACKED_KEYWORDS = [
