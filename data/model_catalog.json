@@ -1,1 +1,62 @@
-[]
+[
+  {
+    "model_id": "anthropic-claude",
+    "vendor": "Anthropic",
+    "family": "Claude",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://claude.com/product/overview",
+    "catalog_version": "2026-07-15",
+    "aliases": ["Claude", "Claude Code"]
+  },
+  {
+    "model_id": "anthropic-claude-opus-4-8",
+    "vendor": "Anthropic",
+    "family": "Claude",
+    "version": "Opus 4.8",
+    "released_on": "2026-05-28",
+    "release_source_url": "https://www.anthropic.com/news/claude-opus-4-8",
+    "catalog_version": "2026-07-15",
+    "aliases": ["Claude Opus 4.8", "Opus 4.8", "claude-opus-4-8"]
+  },
+  {
+    "model_id": "openai-gpt",
+    "vendor": "OpenAI",
+    "family": "GPT",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
+    "catalog_version": "2026-07-15",
+    "aliases": ["GPT", "Codex"]
+  },
+  {
+    "model_id": "openai-gpt-5-6-sol",
+    "vendor": "OpenAI",
+    "family": "GPT",
+    "version": "5.6 Sol",
+    "released_on": "2026-07-09",
+    "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
+    "catalog_version": "2026-07-15",
+    "aliases": ["GPT-5.6 Sol", "GPT 5.6 Sol"]
+  },
+  {
+    "model_id": "openai-gpt-5-6-terra",
+    "vendor": "OpenAI",
+    "family": "GPT",
+    "version": "5.6 Terra",
+    "released_on": "2026-07-09",
+    "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
+    "catalog_version": "2026-07-15",
+    "aliases": ["GPT-5.6 Terra", "GPT 5.6 Terra"]
+  },
+  {
+    "model_id": "openai-gpt-5-6-luna",
+    "vendor": "OpenAI",
+    "family": "GPT",
+    "version": "5.6 Luna",
+    "released_on": "2026-07-09",
+    "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
+    "catalog_version": "2026-07-15",
+    "aliases": ["GPT-5.6 Luna", "GPT 5.6 Luna"]
+  }
+]
