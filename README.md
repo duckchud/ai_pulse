@@ -20,6 +20,13 @@ pytest -q                            # 오프라인 테스트 스위트 실행
 jupyter notebook analysis.ipynb      # Gold 산출물 시각화 + 수동 리뷰 샘플 확인
 ```
 
+### API 키 없이 세션에서 추출하기
+
+프로젝트 내부 Codex 스킬 `ai-pulse-session-enrichment`은 사용자가 Codex에 명시적으로
+요청한 소량의 story를 이 세션에서 분석해 SQLite에 저장한다. 이 경로는
+`ANTHROPIC_API_KEY`가 필요 없고 Claude API를 호출하지 않는다. 이 수동 세션 기반 경로와
+달리 대량 자동 실행은 `enrich.py`와 유효한 API 키를 사용한다.
+
 - `ANTHROPIC_API_KEY`는 `enrich.py`(Silver 추출) 실행 시에만 필요하다. `collector.py`,
   `pytest`, 노트북 열람 자체는 API 키 없이 동작한다.
 - 참조 데이터(`data/model_catalog.json`, `data/benchmark_results.json`)에 새 레코드를
