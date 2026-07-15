@@ -1,4 +1,4 @@
 interface:
   display_name: "AI Pulse 세션 추출"
   short_description: "API 키 없이 AI Pulse Silver 추출 저장"
-  default_prompt: "Use $ai-pulse-session-enrichment to process five pending AI Pulse stories without an API key."
+  default_prompt: "AI Pulse 세션 기반 추출로 미분석 story 5건을 처리해줘."
