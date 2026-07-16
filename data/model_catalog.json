@@ -6,8 +6,11 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://claude.com/product/overview",
-    "catalog_version": "2026-07-15",
-    "aliases": ["Claude", "Claude Code"]
+    "catalog_version": "2026-07-16b",
+    "aliases": [
+      "Claude", "Claude Code", "Claude Desktop", "Claude Tag", "Claude (Agent SDK)",
+      "Claude Opus 4.6", "Opus 4.6", "Claude Sonnet 4", "Claude Sonnet 5"
+    ]
   },
   {
     "model_id": "anthropic-claude-opus-4-8",
@@ -16,7 +19,7 @@
     "version": "Opus 4.8",
     "released_on": "2026-05-28",
     "release_source_url": "https://www.anthropic.com/news/claude-opus-4-8",
-    "catalog_version": "2026-07-15",
+    "catalog_version": "2026-07-16b",
     "aliases": ["Claude Opus 4.8", "Opus 4.8", "claude-opus-4-8"]
   },
   {
@@ -26,8 +29,12 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
-    "catalog_version": "2026-07-15",
-    "aliases": ["GPT", "Codex"]
+    "catalog_version": "2026-07-16b",
+    "aliases": [
+      "GPT", "Codex", "ChatGPT",
+      "GPT-4", "GPT-4o", "GPT-5", "GPT 5.2", "GPT-5.4 xHigh", "GPT-5.6",
+      "GPT-5.6 Sol Ultra"
+    ]
   },
   {
     "model_id": "openai-gpt-5-6-sol",
@@ -36,7 +43,7 @@
     "version": "5.6 Sol",
     "released_on": "2026-07-09",
     "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
-    "catalog_version": "2026-07-15",
+    "catalog_version": "2026-07-16b",
     "aliases": ["GPT-5.6 Sol", "GPT 5.6 Sol"]
   },
   {
@@ -46,7 +53,7 @@
     "version": "5.6 Terra",
     "released_on": "2026-07-09",
     "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
-    "catalog_version": "2026-07-15",
+    "catalog_version": "2026-07-16b",
     "aliases": ["GPT-5.6 Terra", "GPT 5.6 Terra"]
   },
   {
@@ -56,7 +63,70 @@
     "version": "5.6 Luna",
     "released_on": "2026-07-09",
     "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
-    "catalog_version": "2026-07-15",
+    "catalog_version": "2026-07-16b",
     "aliases": ["GPT-5.6 Luna", "GPT 5.6 Luna"]
+  },
+  {
+    "model_id": "google-gemini",
+    "vendor": "Google",
+    "family": "Gemini",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://deepmind.google/models/gemini/",
+    "catalog_version": "2026-07-16b",
+    "aliases": [
+      "Gemini", "Google Gemini", "Gemini AI", "Gemini CLI", "Gemini Live Chat",
+      "Gemini 2.0 Flash", "Gemini 3", "Gemini-3-flash-preview"
+    ]
+  },
+  {
+    "model_id": "deepseek",
+    "vendor": "DeepSeek",
+    "family": "DeepSeek",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://www.deepseek.com/en/",
+    "catalog_version": "2026-07-16b",
+    "aliases": ["DeepSeek", "DeepSeek Chat"]
+  },
+  {
+    "model_id": "alibaba-qwen",
+    "vendor": "Alibaba",
+    "family": "Qwen",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://www.alibabacloud.com/en/solutions/generative-ai/qwen",
+    "catalog_version": "2026-07-16b",
+    "aliases": ["Qwen", "Qwen 3.5", "Qwen 3.5 Flash", "Qwen 3.6", "Qwen3.6-27B"]
+  },
+  {
+    "model_id": "moonshot-kimi",
+    "vendor": "Moonshot AI",
+    "family": "Kimi",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://www.moonshot.ai/",
+    "catalog_version": "2026-07-16b",
+    "aliases": ["Kimi", "Kimi K2.5"]
+  },
+  {
+    "model_id": "minimax",
+    "vendor": "MiniMax",
+    "family": "MiniMax",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://www.minimax.io/",
+    "catalog_version": "2026-07-16b",
+    "aliases": ["MiniMax", "MiniMax-M2.1"]
+  },
+  {
+    "model_id": "zhipu-glm",
+    "vendor": "Zhipu AI",
+    "family": "GLM",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://www.zhipuai.cn/en",
+    "catalog_version": "2026-07-16b",
+    "aliases": ["GLM", "GLM-5.2", "GLM-4"]
   }
 ]
