@@ -32,6 +32,77 @@ def test_pending_stories_rejects_limit_below_one(temporary_db):
         session_enrich.pending_stories(temporary_db, limit=0)
 
 
+def _seed_candidate_fixture(conn, story_ids: list[str]) -> None:
+    conn.execute(
+        "INSERT INTO model_catalog (model_id, vendor, family, release_source_url, catalog_version) "
+        "VALUES ('openai-gpt', 'OpenAI', 'GPT', 'https://example.test/gpt', 'v1')"
+    )
+    for story_id in story_ids:
+        conn.execute(
+            "INSERT INTO story_candidates (story_id, catalog_version, candidate_reason, "
+            "matched_model_ids, evidence_json, selected_at) "
+            "VALUES (?, 'v1', 'catalog_alias_match', ?, ?, '2026-07-16T00:00:00Z')",
+            (story_id, json.dumps(["openai-gpt"]), json.dumps([])),
+        )
+    conn.commit()
+
+
+def test_pending_stories_from_candidates_excludes_non_candidate_stories(temporary_db):
+    for story_id in ("1", "2", "3"):
+        _insert_story(temporary_db, story_id, f"GPT story {story_id}", "body")
+    _seed_candidate_fixture(temporary_db, ["1", "3"])
+
+    rows = session_enrich.pending_stories(
+        temporary_db, limit=10, from_candidates=True, seed=20260716
+    )
+
+    assert sorted(row["story_id"] for row in rows) == ["1", "3"]
+
+
+def test_pending_stories_seeded_order_is_reproducible_and_accumulates(temporary_db):
+    story_ids = [str(n) for n in range(1, 9)]
+    for story_id in story_ids:
+        _insert_story(temporary_db, story_id, f"GPT story {story_id}", "body")
+    _seed_candidate_fixture(temporary_db, story_ids)
+
+    first = session_enrich.pending_stories(
+        temporary_db, limit=3, from_candidates=True, seed=20260716
+    )
+    again = session_enrich.pending_stories(
+        temporary_db, limit=3, from_candidates=True, seed=20260716
+    )
+    # 같은 시드 + 같은 상태 => 같은 결과(결정적).
+    assert [row["story_id"] for row in again] == [row["story_id"] for row in first]
+
+    # 앞 배치를 저장하면 다음 배치는 그 뒤를 이어받되 순서는 유지된다.
+    raw = json.dumps({"relevant": False, "observations": [], "extensions": {}})
+    for row in first:
+        session_enrich.save_session_result(temporary_db, row["story_id"], raw)
+    following = session_enrich.pending_stories(
+        temporary_db, limit=3, from_candidates=True, seed=20260716
+    )
+
+    assert not set(r["story_id"] for r in following) & set(r["story_id"] for r in first)
+    expected = session_enrich.pending_stories(
+        temporary_db, limit=8, from_candidates=True, seed=20260716
+    )
+    assert [row["story_id"] for row in following] == [
+        row["story_id"] for row in expected[:3]
+    ]
+
+
+def test_pending_stories_different_seeds_give_different_order(temporary_db):
+    story_ids = [str(n) for n in range(1, 21)]
+    for story_id in story_ids:
+        _insert_story(temporary_db, story_id, f"GPT story {story_id}", "body")
+    _seed_candidate_fixture(temporary_db, story_ids)
+
+    a = session_enrich.pending_stories(temporary_db, limit=20, from_candidates=True, seed=1)
+    b = session_enrich.pending_stories(temporary_db, limit=20, from_candidates=True, seed=2)
+
+    assert [r["story_id"] for r in a] != [r["story_id"] for r in b]
+
+
 def test_save_cli_records_failed_session_result_after_operational_error(
     monkeypatch, temporary_db, tmp_path, capsys
 ):

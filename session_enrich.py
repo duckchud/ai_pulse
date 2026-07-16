@@ -2,11 +2,12 @@
 
 import argparse
 import json
+import random
 import sqlite3
 from pathlib import Path
 
 from config import DB_PATH, PROMPT_VERSION, SESSION_BATCH_LIMIT, SESSION_EXTRACTION_MODEL
-from db import connect, migrate, save_extraction
+from db import catalog_version, connect, migrate, save_extraction
 from enrich import (
     build_record,
     normalize_story_text,
@@ -15,26 +16,51 @@ from enrich import (
 )
 
 
-def pending_stories(conn: sqlite3.Connection, limit: int) -> list[dict[str, object]]:
-    """Return normalized inputs for stories without an extraction row yet."""
+def pending_stories(
+    conn: sqlite3.Connection,
+    limit: int,
+    from_candidates: bool = False,
+    seed: int | None = None,
+) -> list[dict[str, object]]:
+    """Return normalized inputs for stories without an extraction row yet.
+
+    from_candidates=True면 현재 catalog 버전의 story_candidates만 대상으로 한다.
+    seed를 주면 story id를 그 시드로 섞은 순서에서 앞에서부터 고른다. 이미 추출한
+    story는 늘 빠지므로, 같은 시드로 배치를 나눠 돌리면 한 표본을 순서대로 이어서
+    채우게 된다(재현 가능). seed가 없으면 기존처럼 최신순이다.
+    """
     if limit < 1:
         raise ValueError("limit must be at least 1")
 
+    params: list[object] = [PROMPT_VERSION, SESSION_EXTRACTION_MODEL]
+    candidate_join = ""
+    if from_candidates:
+        candidate_join = (
+            "JOIN story_candidates sc "
+            "  ON sc.story_id = s.id AND sc.catalog_version = ? "
+        )
+        params.append(catalog_version(conn))
+
+    # seed를 쓸 때는 셔플이 결정적이도록 안정된 기준 순서(s.id)로 먼저 정렬한다.
+    order_by = "s.id" if seed is not None else "s.created_at_i DESC"
     story_ids = [
         row["id"]
         for row in conn.execute(
-            """
+            f"""
             SELECT s.id FROM stories s
             LEFT JOIN story_extractions session_extraction
               ON session_extraction.story_id = s.id
              AND session_extraction.prompt_version = ?
              AND session_extraction.model = ?
+            {candidate_join}
             WHERE session_extraction.story_id IS NULL
-            ORDER BY s.created_at_i DESC
+            ORDER BY {order_by}
             """,
-            (PROMPT_VERSION, SESSION_EXTRACTION_MODEL),
+            params,
         ).fetchall()
     ]
+    if seed is not None:
+        random.Random(seed).shuffle(story_ids)
     rows = []
     for story_id in story_ids[:limit]:
         story = conn.execute(
@@ -119,6 +145,14 @@ def main() -> None:
 
     pending_parser = subparsers.add_parser("pending", help="print pending story inputs")
     pending_parser.add_argument("--limit", type=int, default=SESSION_BATCH_LIMIT)
+    pending_parser.add_argument(
+        "--from-candidates",
+        action="store_true",
+        help="현재 catalog 버전의 story_candidates만 대상으로 한다",
+    )
+    pending_parser.add_argument(
+        "--seed", type=int, help="이 시드로 섞은 순서에서 앞에서부터 고른다(재현 가능)"
+    )
 
     save_parser = subparsers.add_parser("save", help="validate and save one result")
     save_parser.add_argument("--story-id", required=True)
@@ -132,7 +166,14 @@ def main() -> None:
     try:
         migrate(conn)
         if args.command == "pending":
-            print(json.dumps(pending_stories(conn, args.limit), ensure_ascii=False))
+            print(
+                json.dumps(
+                    pending_stories(
+                        conn, args.limit, args.from_candidates, args.seed
+                    ),
+                    ensure_ascii=False,
+                )
+            )
         else:
             raw_response = None
             try:
