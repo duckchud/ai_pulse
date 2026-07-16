@@ -1,4 +1,13 @@
-from db import latest_successful_extractions, save_extraction
+import json
+
+import pytest
+
+from db import (
+    catalog_version,
+    latest_successful_extractions,
+    save_extraction,
+    upsert_story_candidates,
+)
 
 
 def test_migrate_creates_schema_free_extractions_table(temporary_db):
@@ -62,3 +71,33 @@ def test_latest_successful_extraction_tie_break_is_deterministic(temporary_db):
     result = latest_successful_extractions(temporary_db)
     assert len(result) == 1
     assert result.iloc[0]["prompt_version"] == "v2"
+
+
+def test_candidates_upsert_per_catalog_version(temporary_db):
+    temporary_db.execute(
+        "INSERT INTO stories (id, source, fetched_at) "
+        "VALUES ('story-1', 'hackernews', '2026-07-16T00:00:00Z')"
+    )
+    row = {
+        "story_id": "story-1",
+        "catalog_version": "v1",
+        "candidate_reason": "catalog_alias_match",
+        "matched_model_ids": json.dumps(["openai:gpt"]),
+        "evidence_json": "[]",
+        "selected_at": "2026-07-16T00:00:00Z",
+    }
+    upsert_story_candidates(temporary_db, [row])
+    upsert_story_candidates(
+        temporary_db, [{**row, "selected_at": "2026-07-16T01:00:00Z"}]
+    )
+    assert temporary_db.execute(
+        "SELECT COUNT(*) FROM story_candidates"
+    ).fetchone()[0] == 1
+    assert temporary_db.execute(
+        "SELECT selected_at FROM story_candidates"
+    ).fetchone()[0] == "2026-07-16T01:00:00Z"
+
+
+def test_catalog_version_requires_exactly_one_value(temporary_db):
+    with pytest.raises(ValueError, match="exactly one catalog_version"):
+        catalog_version(temporary_db)

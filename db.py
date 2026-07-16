@@ -72,6 +72,17 @@ CREATE TABLE IF NOT EXISTS benchmark_results (
     PRIMARY KEY (model_id, benchmark, metric),
     FOREIGN KEY (model_id) REFERENCES model_catalog(model_id)
 );
+
+CREATE TABLE IF NOT EXISTS story_candidates (
+    story_id TEXT NOT NULL,
+    catalog_version TEXT NOT NULL,
+    candidate_reason TEXT NOT NULL,
+    matched_model_ids TEXT NOT NULL,
+    evidence_json TEXT NOT NULL,
+    selected_at TEXT NOT NULL,
+    PRIMARY KEY (story_id, catalog_version),
+    FOREIGN KEY (story_id) REFERENCES stories(id)
+);
 """
 
 WATERMARK_KEY = "watermark"
@@ -137,6 +148,44 @@ def upsert_stories(conn: sqlite3.Connection, rows) -> None:
             collection_query_version = excluded.collection_query_version
         """,
         rows,
+    )
+    conn.commit()
+
+
+def catalog_version(conn: sqlite3.Connection) -> str:
+    versions = [
+        row["catalog_version"]
+        for row in conn.execute(
+            "SELECT DISTINCT catalog_version FROM model_catalog ORDER BY catalog_version"
+        )
+    ]
+    if len(versions) != 1:
+        raise ValueError("candidate selection requires exactly one catalog_version")
+    return versions[0]
+
+
+def upsert_story_candidates(
+    conn: sqlite3.Connection, candidates: list[dict[str, str]]
+) -> None:
+    if not candidates:
+        return
+
+    conn.executemany(
+        """
+        INSERT INTO story_candidates (
+            story_id, catalog_version, candidate_reason, matched_model_ids,
+            evidence_json, selected_at
+        ) VALUES (
+            :story_id, :catalog_version, :candidate_reason, :matched_model_ids,
+            :evidence_json, :selected_at
+        )
+        ON CONFLICT(story_id, catalog_version) DO UPDATE SET
+            candidate_reason = excluded.candidate_reason,
+            matched_model_ids = excluded.matched_model_ids,
+            evidence_json = excluded.evidence_json,
+            selected_at = excluded.selected_at
+        """,
+        candidates,
     )
     conn.commit()
 
