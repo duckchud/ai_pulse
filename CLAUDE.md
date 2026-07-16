@@ -13,8 +13,12 @@ The pipeline follows a Bronze / Silver / Gold structure.
 - **Bronze — `collector.py`**: Collects Algolia HN stories and upserts them
   into the local SQLite database (`ai_monitor.db`). This MVP is manually run;
   Firebase and automated scheduling are out of scope.
-- **Silver — `enrich.py`**: Stores a Claude response as a validated,
-  schema-light JSON extraction with source evidence in `story_extractions`.
+- **Silver — `session_enrich.py`**: Stores a session-authored response as a
+  validated, schema-light JSON extraction with source evidence in
+  `story_extractions`. The pipeline calls no model API; an agent session
+  analyzes each story directly under the `ai-pulse-session-enrichment` skill and
+  rows are labeled `model = 'session-v1'`. `enrich.py` holds the shared envelope
+  contract, input normalization, and evidence verification.
 - **Reference data**: A versioned model catalog, aliases, and sourced
   benchmark records provide release and performance facts.
 - **Gold — `analysis.py`**: Read-only pandas functions map raw observations to
@@ -37,13 +41,13 @@ implementation-architecture documents are historical context only.
 ## Commands
 
 ```bash
-pip install requests anthropic pandas networkx
+pip install -r requirements.txt
 python collector.py --backfill 3
-python enrich.py --limit 10
+python session_enrich.py pending --limit 5
+python session_enrich.py save --story-id ID --raw-file PATH
 ```
 
-Set `ANTHROPIC_API_KEY` in the environment before running `enrich.py`. Never
-commit API keys, local databases, or generated caches.
+Never commit local databases or generated caches.
 
 ## Development conventions
 

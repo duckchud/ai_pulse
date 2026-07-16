@@ -5,7 +5,11 @@
 AI Pulse is a local Python pipeline for analyzing AI-model discussion in Hacker News.
 
 - `collector.py`: Bronze ingestion from the Algolia HN API.
-- `enrich.py`: Silver extraction of evidence-backed, schema-light JSON.
+- `enrich.py`: the Silver envelope contract, input normalization, and evidence
+  verification core. Calls no model API.
+- `session_enrich.py`: Silver extraction driven by an agent session under the
+  `.codex/skills/ai-pulse-session-enrichment` skill; validates and persists
+  session-authored envelopes as `model = 'session-v1'` rows.
 - `db.py` and `config.py`: SQLite persistence, migrations, and non-secret settings.
 - `reference_data.py` and `data/`: sourced model catalog, aliases, and benchmark records.
 - `analysis.py`: Gold pandas functions for model family/version trends, co-occurrence,
@@ -27,13 +31,12 @@ context, not implementation instructions.
 pip install -r requirements.txt
 python collector.py --backfill 3  # Recollect the recent three-day window
 python collector.py               # Incremental run with the safety overlap
-python enrich.py --limit 10       # Extract ten eligible stories
-python enrich.py --retry-failed   # Retry failed or invalid extractions
+python session_enrich.py pending --limit 5                    # Fetch unextracted inputs
+python session_enrich.py save --story-id ID --raw-file PATH   # Persist one result
 pytest -q                         # Run offline tests
 ```
 
-Set `ANTHROPIC_API_KEY` only when running enrichment. `ai_monitor.db` is local runtime
-data and must never be committed.
+`ai_monitor.db` is local runtime data and must never be committed.
 
 See `README.md` for the full local execution checklist and the latest smoke-test results.
 
@@ -51,15 +54,15 @@ conditions.
 
 ## Testing Guidelines
 
-Use pytest with temporary SQLite databases and mocked HTTP/Claude clients. Cover overlap
-watermarks, idempotent story upserts, envelope and evidence validation, extraction retry
-states, alias resolution, unresolved values, empty Gold results, fixed-time windows, and
-fixed-seed review-sample reproducibility. Tests must not require network access or API
-keys.
+Use pytest with temporary SQLite databases and mocked HTTP clients. Cover overlap
+watermarks, idempotent story upserts, envelope and evidence validation, session
+extraction states, alias resolution, unresolved values, empty Gold results, fixed-time
+windows, and fixed-seed review-sample reproducibility. Tests must not require network
+access.
 
 ## Commit, PR, and Security Guidelines
 
 Use focused Conventional Commit-style subjects, for example `feat: add model trend query`
 or `docs: revise extraction contract`. PRs should state scope, validation commands,
 source-data changes, and notebook screenshots when charts change. Never commit `.env`,
-API keys, SQLite files, logs, caches, or unverified model-reference data.
+secrets, SQLite files, logs, caches, or unverified model-reference data.

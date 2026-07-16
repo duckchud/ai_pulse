@@ -1,4 +1,4 @@
-"""Persist externally produced session extraction results without calling an API."""
+"""Validate and persist session-authored extraction results into story_extractions."""
 
 import argparse
 import json
@@ -16,7 +16,7 @@ from enrich import (
 
 
 def pending_stories(conn: sqlite3.Connection, limit: int) -> list[dict[str, object]]:
-    """Return normalized inputs without a session row or successful API row."""
+    """Return normalized inputs for stories without an extraction row yet."""
     if limit < 1:
         raise ValueError("limit must be at least 1")
 
@@ -30,15 +30,9 @@ def pending_stories(conn: sqlite3.Connection, limit: int) -> list[dict[str, obje
              AND session_extraction.prompt_version = ?
              AND session_extraction.model = ?
             WHERE session_extraction.story_id IS NULL
-              AND NOT EXISTS (
-                  SELECT 1 FROM story_extractions api_extraction
-                  WHERE api_extraction.story_id = s.id
-                    AND api_extraction.status = 'succeeded'
-                    AND api_extraction.model != ?
-              )
             ORDER BY s.created_at_i DESC
             """,
-            (PROMPT_VERSION, SESSION_EXTRACTION_MODEL, SESSION_EXTRACTION_MODEL),
+            (PROMPT_VERSION, SESSION_EXTRACTION_MODEL),
         ).fetchall()
     ]
     rows = []

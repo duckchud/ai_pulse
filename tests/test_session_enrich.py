@@ -5,7 +5,6 @@ import sys
 import pytest
 
 import session_enrich
-from db import save_extraction
 
 
 def _insert_story(conn, story_id: str, title: str, text: str) -> None:
@@ -26,28 +25,6 @@ def test_pending_stories_returns_normalized_bounded_inputs(temporary_db):
     rows = session_enrich.pending_stories(temporary_db, limit=1)
 
     assert rows == [{"story_id": "2", "input": {"title": "GPT-5", "text": "second"}}]
-
-
-def test_pending_stories_excludes_story_with_successful_api_extraction(temporary_db):
-    _insert_story(temporary_db, "1", "Qwen3 release", "body")
-    save_extraction(
-        temporary_db,
-        {
-            "story_id": "1",
-            "prompt_version": session_enrich.PROMPT_VERSION,
-            "model": "claude-test",
-            "status": "succeeded",
-            "raw_response": "{}",
-            "parsed_json": "{}",
-            "input_hash": "input",
-            "input_char_count": 1,
-            "input_truncated": 0,
-            "error_message": None,
-            "enriched_at": "2026-07-14T00:00:00Z",
-        },
-    )
-
-    assert session_enrich.pending_stories(temporary_db, limit=1) == []
 
 
 def test_pending_stories_rejects_limit_below_one(temporary_db):
@@ -85,7 +62,7 @@ def test_save_cli_records_failed_session_result_after_operational_error(
 
     row = temporary_db.execute(
         "SELECT status, error_message, raw_response FROM story_extractions "
-        "WHERE story_id = '1' AND model = 'codex-session-v1'"
+        "WHERE story_id = '1' AND model = 'session-v1'"
     ).fetchone()
     assert capsys.readouterr().out.strip() == "failed"
     assert row["status"] == "failed"
@@ -112,7 +89,7 @@ def test_save_session_result_verifies_and_persists_success(temporary_db):
     row = temporary_db.execute(
         "SELECT model, status, raw_response, parsed_json FROM story_extractions"
     ).fetchone()
-    assert row["model"] == "codex-session-v1"
+    assert row["model"] == "session-v1"
     assert row["status"] == "succeeded"
     assert row["raw_response"] == raw
     assert json.loads(row["parsed_json"])["observations"][0]["evidence_verified"] is True
@@ -162,8 +139,13 @@ def test_save_session_result_marks_malformed_json_invalid(temporary_db):
     assert row["parsed_json"] is None
 
 
-def test_session_adapter_does_not_require_anthropic_api_key(monkeypatch, temporary_db):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+def test_pending_stories_excludes_already_extracted_story(temporary_db):
+    # 이미 세션 추출 행이 있는 story는 다시 pending으로 잡히지 않아야 한다(중복 추출 방지).
     _insert_story(temporary_db, "1", "Qwen3 release", "body")
+    _insert_story(temporary_db, "2", "GPT-5", "second")
+    raw = json.dumps({"relevant": False, "observations": [], "extensions": {}})
+    session_enrich.save_session_result(temporary_db, "2", raw)
 
-    assert session_enrich.pending_stories(temporary_db, limit=5)[0]["story_id"] == "1"
+    rows = session_enrich.pending_stories(temporary_db, limit=5)
+
+    assert [row["story_id"] for row in rows] == ["1"]

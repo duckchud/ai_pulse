@@ -325,15 +325,13 @@ def save_extraction(conn: sqlite3.Connection, record: dict) -> None:
 
 
 def latest_successful_extractions(conn: sqlite3.Connection) -> pd.DataFrame:
-    # API 추출을 세션 추출보다 우선하고, 같은 우선순위 안에서는 최신 enriched_at,
-    # 동률이면 rowid DESC(가장 나중에 쓰인 레코드)로 결정한다.
-    # 첫 정렬 뒤 drop_duplicates(keep="first")로 story별 승자를 정한 다음,
+    # story별로 최신 enriched_at, 동률이면 rowid DESC(가장 나중에 쓰인 레코드)를
+    # 고른다. 첫 정렬 뒤 drop_duplicates(keep="first")로 story별 승자를 정한 다음,
     # 기존처럼 선택된 결과 전체는 최신순으로 다시 정렬한다.
     df = pd.read_sql_query(
         "SELECT rowid AS extraction_rowid, * FROM story_extractions "
         "WHERE status = 'succeeded' "
-        "ORDER BY CASE WHEN model = 'codex-session-v1' THEN 1 ELSE 0 END, "
-        "enriched_at DESC, rowid DESC",
+        "ORDER BY enriched_at DESC, rowid DESC",
         conn,
     )
     if df.empty:

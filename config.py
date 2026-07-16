@@ -6,8 +6,8 @@ REQUEST_PAUSE_SECONDS = 0.25
 OVERLAP_SECONDS = 7_200
 COLLECTION_QUERY_VERSION = "v1"
 PROMPT_VERSION = "schema-free-v1"
-EXTRACTION_MODEL = "claude-haiku-4-5-20251001"
-SESSION_EXTRACTION_MODEL = "codex-session-v1"
+# 세션이 만든 추출의 출처 라벨. 특정 하네스(Codex/Claude Code)를 가리키지 않는다.
+SESSION_EXTRACTION_MODEL = "session-v1"
 SESSION_BATCH_LIMIT = 5
 
 BROAD_KEYWORDS = ["artificial intelligence", "LLM", "machine learning", "AI agent"]

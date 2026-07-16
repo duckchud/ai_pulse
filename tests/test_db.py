@@ -28,19 +28,19 @@ def test_latest_successful_extraction_prefers_newest_success(temporary_db):
     assert latest_successful_extractions(temporary_db).iloc[0]["prompt_version"] == "v2"
 
 
-def test_latest_successful_extraction_prefers_api_success_over_newer_session_success(temporary_db):
+def test_latest_successful_extraction_prefers_newest_row_for_same_story(temporary_db):
     temporary_db.execute(
         "INSERT INTO stories (id, source, title, url, author, points, num_comments, "
         "created_at, created_at_i, text, matched_keywords, fetched_at) "
         "VALUES ('1','hackernews','T',NULL,'a',1,0,'2026-07-14T00:00:00Z',1,NULL,'LLM','x')"
     )
-    save_extraction(temporary_db, {"story_id": "1", "prompt_version": "v1", "model": "claude-test", "status": "succeeded", "raw_response": "{}", "parsed_json": "{}", "input_hash": "a", "input_char_count": 1, "input_truncated": 0, "error_message": None, "enriched_at": "2026-07-14T00:00:00Z"})
-    save_extraction(temporary_db, {"story_id": "1", "prompt_version": "v1", "model": "codex-session-v1", "status": "succeeded", "raw_response": "{}", "parsed_json": "{}", "input_hash": "a", "input_char_count": 1, "input_truncated": 0, "error_message": None, "enriched_at": "2026-07-14T01:00:00Z"})
+    save_extraction(temporary_db, {"story_id": "1", "prompt_version": "v1", "model": "session-v1", "status": "succeeded", "raw_response": "{}", "parsed_json": "{}", "input_hash": "a", "input_char_count": 1, "input_truncated": 0, "error_message": None, "enriched_at": "2026-07-14T00:00:00Z"})
+    save_extraction(temporary_db, {"story_id": "1", "prompt_version": "v2", "model": "session-v1", "status": "succeeded", "raw_response": "{}", "parsed_json": "{}", "input_hash": "a", "input_char_count": 1, "input_truncated": 0, "error_message": None, "enriched_at": "2026-07-14T01:00:00Z"})
 
     result = latest_successful_extractions(temporary_db)
 
     assert len(result) == 1
-    assert result.iloc[0]["model"] == "claude-test"
+    assert result.iloc[0]["prompt_version"] == "v2"
 
 
 def test_latest_successful_extractions_keeps_selected_rows_newest_first(temporary_db):
@@ -52,8 +52,8 @@ def test_latest_successful_extractions_keeps_selected_rows_newest_first(temporar
             "'2026-07-14T00:00:00Z', ?, NULL, 'LLM', 'x')",
             (story_id, int(story_id)),
         )
-    save_extraction(temporary_db, {"story_id": "1", "prompt_version": "v1", "model": "codex-session-v1", "status": "succeeded", "raw_response": "{}", "parsed_json": "{}", "input_hash": "a", "input_char_count": 1, "input_truncated": 0, "error_message": None, "enriched_at": "2026-07-14T02:00:00Z"})
-    save_extraction(temporary_db, {"story_id": "2", "prompt_version": "v1", "model": "claude-test", "status": "succeeded", "raw_response": "{}", "parsed_json": "{}", "input_hash": "a", "input_char_count": 1, "input_truncated": 0, "error_message": None, "enriched_at": "2026-07-14T01:00:00Z"})
+    save_extraction(temporary_db, {"story_id": "1", "prompt_version": "v1", "model": "session-v1", "status": "succeeded", "raw_response": "{}", "parsed_json": "{}", "input_hash": "a", "input_char_count": 1, "input_truncated": 0, "error_message": None, "enriched_at": "2026-07-14T02:00:00Z"})
+    save_extraction(temporary_db, {"story_id": "2", "prompt_version": "v1", "model": "session-v1", "status": "succeeded", "raw_response": "{}", "parsed_json": "{}", "input_hash": "a", "input_char_count": 1, "input_truncated": 0, "error_message": None, "enriched_at": "2026-07-14T01:00:00Z"})
 
     result = latest_successful_extractions(temporary_db)
 
