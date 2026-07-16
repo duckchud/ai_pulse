@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from candidate_selection import match_story_aliases, select_candidates
+from candidate_selection import match_story_aliases, select_candidates, unmatched_sample
 
 
 ALIASES = [
@@ -70,3 +70,24 @@ def test_selector_persists_catalog_alias_matches_idempotently(catalog_with_candi
     assert json.loads(row["matched_model_ids"]) == ["anthropic:claude", "openai:gpt"]
     assert len(json.loads(row["evidence_json"])) == 2
     assert row["selected_at"] == "2026-07-16T02:00:00Z"
+
+
+def test_unmatched_sample_is_reproducible_and_excludes_candidates(
+    catalog_with_candidate_stories,
+):
+    catalog_with_candidate_stories.execute(
+        "INSERT INTO stories (id, source, title, text, fetched_at) VALUES (?, ?, ?, ?, ?)",
+        ("unknown-b", "hackernews", "AI story B", None, "2026-07-16T00:00:00Z"),
+    )
+    catalog_with_candidate_stories.commit()
+    select_candidates(catalog_with_candidate_stories, "2026-07-16T00:00:00Z")
+
+    first = unmatched_sample(catalog_with_candidate_stories, sample_size=1, seed=7)
+
+    assert first == unmatched_sample(catalog_with_candidate_stories, sample_size=1, seed=7)
+    assert {row["story_id"] for row in first}.isdisjoint({"candidate"})
+
+
+def test_unmatched_sample_rejects_zero_size(temporary_db):
+    with pytest.raises(ValueError, match="sample_size must be at least 1"):
+        unmatched_sample(temporary_db, 0, 7)

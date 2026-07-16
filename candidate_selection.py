@@ -1,6 +1,8 @@
 """Deterministic catalog-alias candidate selection for collected stories."""
 
+import argparse
 import json
+import random
 import re
 import sqlite3
 from datetime import datetime, timezone
@@ -73,11 +75,61 @@ def select_candidates(conn: sqlite3.Connection, selected_at: str | None = None) 
     return len(candidates)
 
 
+def unmatched_sample(
+    conn: sqlite3.Connection, sample_size: int, seed: int
+) -> list[dict[str, object]]:
+    if sample_size < 1:
+        raise ValueError("sample_size must be at least 1")
+
+    version = catalog_version(conn)
+    rows = [
+        dict(row)
+        for row in conn.execute(
+            "SELECT s.id AS story_id, s.title, s.text "
+            "FROM stories s "
+            "LEFT JOIN story_candidates sc "
+            "ON sc.story_id = s.id AND sc.catalog_version = ? "
+            "WHERE sc.story_id IS NULL "
+            "ORDER BY s.id",
+            (version,),
+        )
+    ]
+    return random.Random(seed).sample(rows, k=min(sample_size, len(rows)))
+
+
+def _positive_sample_size(value: str) -> int:
+    sample_size = int(value)
+    if sample_size < 1:
+        raise argparse.ArgumentTypeError("sample_size must be at least 1")
+    return sample_size
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Catalog-driven offline story candidate selection."
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("select", help="select catalog alias candidates")
+    unmatched_parser = subparsers.add_parser(
+        "unmatched-sample", help="sample stories without catalog candidates"
+    )
+    unmatched_parser.add_argument("--sample-size", type=_positive_sample_size, required=True)
+    unmatched_parser.add_argument("--seed", type=int, required=True)
+    args = parser.parse_args()
+
     conn = connect(DB_PATH)
     try:
-        migrate(conn)
-        return select_candidates(conn)
+        if args.command == "select":
+            migrate(conn)
+            count = select_candidates(conn)
+            print(f"후보 선별 완료: {count}건")
+        else:
+            print(
+                json.dumps(
+                    unmatched_sample(conn, args.sample_size, args.seed), ensure_ascii=False
+                )
+            )
+        return 0
     finally:
         conn.close()
 
