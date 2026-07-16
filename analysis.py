@@ -210,10 +210,9 @@ def _load_candidate_mentions(conn: sqlite3.Connection) -> pd.DataFrame:
     후보는 catalog alias 매칭 결과이므로, Silver extraction이나 모델 응답을 읽지
     않는다. catalog가 아직 비어 있고 후보도 없으면 초기 상태의 빈 frame을 준다.
     """
-    has_candidates = conn.execute(
-        "SELECT 1 FROM story_candidates LIMIT 1"
-    ).fetchone()
-    if has_candidates is None:
+    has_catalog = conn.execute("SELECT 1 FROM model_catalog LIMIT 1").fetchone()
+    has_candidates = conn.execute("SELECT 1 FROM story_candidates LIMIT 1").fetchone()
+    if has_catalog is None and has_candidates is None:
         return pd.DataFrame(columns=_CANDIDATE_MENTION_COLUMNS)
 
     current_catalog_version = catalog_version(conn)
@@ -252,17 +251,19 @@ def _load_candidate_mentions(conn: sqlite3.Connection) -> pd.DataFrame:
     for _, candidate in candidates.iterrows():
         try:
             model_ids = json.loads(candidate["matched_model_ids"])
-        except (TypeError, ValueError):
-            continue
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise ValueError("matched_model_ids must be a JSON array") from exc
         if not isinstance(model_ids, list):
-            continue
+            raise ValueError("matched_model_ids must be a JSON array")
         seen_model_ids = set()
         for model_id in model_ids:
-            if not isinstance(model_id, str) or model_id in seen_model_ids:
-                continue
+            if not isinstance(model_id, str) or not model_id:
+                raise ValueError("matched_model_ids must contain non-empty model IDs")
+            if model_id in seen_model_ids:
+                raise ValueError("matched_model_ids must contain unique model IDs")
             seen_model_ids.add(model_id)
             if model_id not in catalog.index:
-                continue
+                raise ValueError("matched_model_ids must exist in the current catalog")
             model = catalog.loc[model_id]
             rows.append(
                 {

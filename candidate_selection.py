@@ -8,7 +8,7 @@ import sqlite3
 from datetime import datetime, timezone
 
 from config import DB_PATH
-from db import catalog_version, connect, migrate, upsert_story_candidates
+from db import catalog_version, connect, migrate, replace_story_candidates
 from reference_data import normalize_alias
 
 
@@ -71,7 +71,7 @@ def select_candidates(conn: sqlite3.Connection, selected_at: str | None = None) 
                 else datetime.now(timezone.utc).isoformat(),
             }
         )
-    upsert_story_candidates(conn, candidates)
+    replace_story_candidates(conn, version, candidates)
     return len(candidates)
 
 
@@ -124,6 +124,7 @@ def main() -> int:
             count = select_candidates(conn)
             print(f"후보 선별 완료: {count}건")
         else:
+            migrate(conn)
             print(
                 json.dumps(
                     unmatched_sample(conn, args.sample_size, args.seed), ensure_ascii=False

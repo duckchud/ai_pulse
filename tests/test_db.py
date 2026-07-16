@@ -5,6 +5,7 @@ import pytest
 from db import (
     catalog_version,
     latest_successful_extractions,
+    replace_story_candidates,
     save_extraction,
     upsert_story_candidates,
 )
@@ -78,6 +79,10 @@ def test_candidates_upsert_per_catalog_version(temporary_db):
         "INSERT INTO stories (id, source, fetched_at) "
         "VALUES ('story-1', 'hackernews', '2026-07-16T00:00:00Z')"
     )
+    temporary_db.execute(
+        "INSERT INTO model_catalog (model_id, vendor, family, release_source_url, catalog_version) "
+        "VALUES ('openai:gpt', 'OpenAI', 'GPT', 'https://example.test/gpt', 'v1')"
+    )
     row = {
         "story_id": "story-1",
         "catalog_version": "v1",
@@ -101,3 +106,84 @@ def test_candidates_upsert_per_catalog_version(temporary_db):
 def test_catalog_version_requires_exactly_one_value(temporary_db):
     with pytest.raises(ValueError, match="exactly one catalog_version"):
         catalog_version(temporary_db)
+
+
+def _candidate_row(story_id="story-1", **overrides):
+    row = {
+        "story_id": story_id,
+        "catalog_version": "v1",
+        "candidate_reason": "catalog_alias_match",
+        "matched_model_ids": json.dumps(["openai:gpt"]),
+        "evidence_json": json.dumps([
+            {"model_id": "openai:gpt", "alias": "GPT", "field": "title", "quote": "GPT"}
+        ]),
+        "selected_at": "2026-07-16T00:00:00Z",
+    }
+    return {**row, **overrides}
+
+
+@pytest.fixture
+def candidate_validation_db(temporary_db):
+    temporary_db.executemany(
+        "INSERT INTO stories (id, source, title, text, fetched_at) VALUES (?, ?, ?, ?, ?)",
+        [
+            ("story-1", "hackernews", "GPT announcement", "Claude comparison", "2026-07-16T00:00:00Z"),
+            ("story-2", "hackernews", "GPT follow-up", None, "2026-07-16T00:00:00Z"),
+        ],
+    )
+    temporary_db.execute(
+        "INSERT INTO model_catalog (model_id, vendor, family, release_source_url, catalog_version) "
+        "VALUES ('openai:gpt', 'OpenAI', 'GPT', 'https://example.test/gpt', 'v1')"
+    )
+    temporary_db.commit()
+    return temporary_db
+
+
+@pytest.mark.parametrize(
+    "row, message",
+    [
+        (_candidate_row(matched_model_ids="not-json"), "matched_model_ids must be a JSON array"),
+        (_candidate_row(evidence_json="not-json"), "evidence_json must be a JSON array"),
+        (_candidate_row(matched_model_ids=json.dumps(["openai:gpt", "openai:gpt"])), "unique"),
+        (_candidate_row(matched_model_ids=json.dumps(["unknown:model"])), "current catalog"),
+        (_candidate_row(evidence_json=json.dumps([
+            {"model_id": "openai:gpt", "alias": "GPT", "field": "url", "quote": "GPT"}
+        ])), "field"),
+        (_candidate_row(evidence_json=json.dumps([
+            {"model_id": "openai:gpt", "alias": "GPT", "field": "title", "quote": "missing"}
+        ])), "substring"),
+        (_candidate_row(evidence_json=json.dumps([
+            {"model_id": "unknown:model", "alias": "Unknown", "field": "title", "quote": "GPT"}
+        ])), "matched_model_ids"),
+    ],
+)
+def test_candidate_persistence_rejects_invalid_payloads(candidate_validation_db, row, message):
+    with pytest.raises(ValueError, match=message):
+        upsert_story_candidates(candidate_validation_db, [row])
+    assert candidate_validation_db.execute("SELECT COUNT(*) FROM story_candidates").fetchone()[0] == 0
+
+
+def test_candidate_persistence_rolls_back_an_entire_invalid_batch(candidate_validation_db):
+    valid = _candidate_row()
+    invalid = _candidate_row("story-2", matched_model_ids=json.dumps(["unknown:model"]))
+
+    with pytest.raises(ValueError, match="current catalog"):
+        upsert_story_candidates(candidate_validation_db, [valid, invalid])
+    assert candidate_validation_db.execute("SELECT COUNT(*) FROM story_candidates").fetchone()[0] == 0
+
+
+def test_candidate_replacement_keeps_existing_rows_when_validation_fails(
+    candidate_validation_db,
+):
+    existing = _candidate_row(selected_at="2026-07-16T00:00:00Z")
+    upsert_story_candidates(candidate_validation_db, [existing])
+    invalid = _candidate_row(matched_model_ids=json.dumps(["unknown:model"]))
+
+    with pytest.raises(ValueError, match="current catalog"):
+        replace_story_candidates(candidate_validation_db, "v1", [invalid])
+    assert dict(candidate_validation_db.execute(
+        "SELECT matched_model_ids, selected_at FROM story_candidates"
+    ).fetchone()) == {
+        "matched_model_ids": json.dumps(["openai:gpt"]),
+        "selected_at": "2026-07-16T00:00:00Z",
+    }

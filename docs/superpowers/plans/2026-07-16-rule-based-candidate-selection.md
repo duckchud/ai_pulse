@@ -269,7 +269,7 @@ Run the following using a temporary path outside the repository; use a short `py
 
 - [ ] **Step 2: Exercise the public functions without a model call**
 
-Using `connect(temp_db)`, call `select_candidates(conn)` and `unmatched_sample(conn, sample_size=1, seed=7)`. Assert selection returns 1 and the sample returns only the unrelated story. Then call `candidate_emerging_models(conn, as_of, "family", min_recent_count=1)` and assert it has one candidate group. This direct-function smoke test avoids adding environment-variable configuration to `config.py` solely for verification.
+Using `connect(temp_db)`, call `select_candidates(conn)` and `unmatched_sample(conn, sample_size=1, seed=7)`. Assert selection returns 1 and the sample returns only the unrelated story. Then call `candidate_emerging_models(conn, as_of, "family", min_recent_count=1)` and assert it has the named `OpenAI/GPT` and `Anthropic/Claude` candidate groups. This direct-function smoke test avoids adding environment-variable configuration to `config.py` solely for verification.
 
 - [ ] **Step 3: Run complete offline verification**
 

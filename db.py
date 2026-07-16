@@ -4,6 +4,7 @@ Bronze/Silver 계층이 공유하는 SQLite 접근 지점. 스키마 마이그�
 story_extractions(추출 이력) 저장/조회를 제공한다.
 """
 
+import json
 import sqlite3
 from pathlib import Path
 
@@ -170,6 +171,85 @@ def upsert_story_candidates(
     if not candidates:
         return
 
+    _validate_story_candidates(conn, candidates)
+    _write_story_candidates(conn, candidates)
+    conn.commit()
+
+
+def replace_story_candidates(
+    conn: sqlite3.Connection,
+    catalog_version_value: str,
+    candidates: list[dict[str, str]],
+) -> None:
+    """현재 catalog version의 후보를 검증 뒤 한 트랜잭션으로 교체한다."""
+    if any(row["catalog_version"] != catalog_version_value for row in candidates):
+        raise ValueError("candidate catalog_version does not match replacement version")
+    _validate_story_candidates(conn, candidates)
+    with conn:
+        conn.execute(
+            "DELETE FROM story_candidates WHERE catalog_version = ?",
+            (catalog_version_value,),
+        )
+        if candidates:
+            _write_story_candidates(conn, candidates)
+
+
+def _json_array(value: str, field_name: str) -> list:
+    try:
+        parsed = json.loads(value)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{field_name} must be a JSON array") from exc
+    if not isinstance(parsed, list):
+        raise ValueError(f"{field_name} must be a JSON array")
+    return parsed
+
+
+def _validate_story_candidates(
+    conn: sqlite3.Connection, candidates: list[dict[str, str]]
+) -> None:
+    catalog_model_ids = {
+        row["model_id"] for row in conn.execute("SELECT model_id FROM model_catalog")
+    }
+    stories = {
+        row["id"]: row
+        for row in conn.execute("SELECT id, title, text FROM stories")
+    }
+    for candidate in candidates:
+        story = stories.get(candidate["story_id"])
+        if story is None:
+            raise ValueError("candidate story_id must refer to an existing story")
+        model_ids = _json_array(candidate["matched_model_ids"], "matched_model_ids")
+        if not all(isinstance(model_id, str) and model_id for model_id in model_ids):
+            raise ValueError("matched_model_ids must contain non-empty model IDs")
+        if len(model_ids) != len(set(model_ids)):
+            raise ValueError("matched_model_ids must contain unique model IDs")
+        unknown_model_ids = set(model_ids) - catalog_model_ids
+        if unknown_model_ids:
+            raise ValueError("matched_model_ids must exist in the current catalog")
+
+        evidence = _json_array(candidate["evidence_json"], "evidence_json")
+        for item in evidence:
+            if not isinstance(item, dict):
+                raise ValueError("evidence_json entries must be objects")
+            model_id = item.get("model_id")
+            alias = item.get("alias")
+            field = item.get("field")
+            quote = item.get("quote")
+            if not isinstance(model_id, str) or model_id not in model_ids:
+                raise ValueError("evidence model_id must be in matched_model_ids")
+            if not isinstance(alias, str) or not alias:
+                raise ValueError("evidence alias must be a non-empty string")
+            if field not in ("title", "text"):
+                raise ValueError("evidence field must be title or text")
+            if not isinstance(quote, str) or not quote:
+                raise ValueError("evidence quote must be a non-empty string")
+            if quote not in (story[field] or ""):
+                raise ValueError("evidence quote must be a substring of the story field")
+
+
+def _write_story_candidates(
+    conn: sqlite3.Connection, candidates: list[dict[str, str]]
+) -> None:
     conn.executemany(
         """
         INSERT INTO story_candidates (
@@ -187,7 +267,6 @@ def upsert_story_candidates(
         """,
         candidates,
     )
-    conn.commit()
 
 
 def save_extraction(conn: sqlite3.Connection, record: dict) -> None:

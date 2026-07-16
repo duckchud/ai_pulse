@@ -31,8 +31,8 @@ jupyter notebook analysis.ipynb      # Gold 산출물 시각화 + 수동 리뷰 
   `pytest`, 노트북 열람 자체는 API 키 없이 동작한다.
 
 ```bash
-python candidate_selection.py select                            # catalog alias 후보 선별
-python candidate_selection.py unmatched-sample --sample-size 30 --seed 20260716
+python3 candidate_selection.py select                            # catalog alias 후보 선별
+python3 candidate_selection.py unmatched-sample --sample-size 30 --seed 20260716
 ```
 
 - 후보 선별과 미매칭 샘플링은 오프라인 catalog 기반 명령이며 sentiment/stance를 의도적으로 포함하지 않는다.

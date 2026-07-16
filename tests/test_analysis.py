@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from analysis import (
     _load_candidate_mentions,
     candidate_emerging_models,
@@ -164,16 +166,55 @@ def test_candidate_gold_returns_empty_frames_without_candidates(temporary_db):
     assert candidate_model_cooccurrence(temporary_db, "2026-07-14T12:00:00Z", "family").empty
 
 
-def test_candidate_loader_returns_one_row_per_story_and_model_id(temporary_db, tmp_path):
+@pytest.mark.parametrize("function", [candidate_emerging_models, candidate_model_cooccurrence])
+def test_candidate_gold_rejects_nonempty_mixed_catalog_versions(temporary_db, function):
+    temporary_db.executemany(
+        "INSERT INTO model_catalog (model_id, vendor, family, release_source_url, catalog_version) "
+        "VALUES (?, ?, ?, ?, ?)",
+        [
+            ("openai:gpt", "OpenAI", "GPT", "https://example.test/gpt", "v1"),
+            ("anthropic:claude", "Anthropic", "Claude", "https://example.test/claude", "v2"),
+        ],
+    )
+    with pytest.raises(ValueError, match="exactly one catalog_version"):
+        function(temporary_db, "2026-07-14T12:00:00Z", "family")
+
+
+def test_candidate_gold_rejects_malformed_persisted_model_ids(temporary_db, tmp_path):
+    _import_catalog(temporary_db, tmp_path, [{
+        "model_id": "openai:gpt", "vendor": "OpenAI", "family": "GPT", "version": None,
+        "released_on": None, "release_source_url": "https://example.test/gpt",
+        "catalog_version": "v1", "aliases": ["GPT"],
+    }])
+    _insert_story(temporary_db, "story-1", 1784023200)
+    temporary_db.execute(
+        "INSERT INTO story_candidates VALUES (?, ?, ?, ?, ?, ?)",
+        ("story-1", "v1", "catalog_alias_match", "not-json", "[]", "2026-07-14T10:02:00Z"),
+    )
+    temporary_db.commit()
+
+    with pytest.raises(ValueError, match="matched_model_ids must be a JSON array"):
+        _load_candidate_mentions(temporary_db)
+
+
+def test_candidate_loader_rejects_duplicate_persisted_model_ids(temporary_db, tmp_path):
     _import_catalog(temporary_db, tmp_path, [{
         "model_id": "openai:gpt:5", "vendor": "OpenAI", "family": "GPT", "version": "5",
         "released_on": None, "release_source_url": "https://example.test/gpt",
         "catalog_version": "v1", "aliases": ["GPT-5"],
     }])
     _insert_story(temporary_db, "story-1", 1784023200)
-    _candidate(temporary_db, "story-1", ["openai:gpt:5", "openai:gpt:5"])
-    mentions = _load_candidate_mentions(temporary_db)
-    assert len(mentions) == 1
+    temporary_db.execute(
+        "INSERT INTO story_candidates VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            "story-1", "v1", "catalog_alias_match",
+            json.dumps(["openai:gpt:5", "openai:gpt:5"]), json.dumps([]),
+            "2026-07-14T10:02:00Z",
+        ),
+    )
+    temporary_db.commit()
+    with pytest.raises(ValueError, match="unique"):
+        _load_candidate_mentions(temporary_db)
 
 
 def test_model_framing_sentiment_preserves_original_stance_labels(temporary_db, tmp_path):
