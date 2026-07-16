@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from config import PROMPT_VERSION
-from db import latest_successful_extractions
+from db import catalog_version, latest_successful_extractions
 from enrich import normalize_story_text
 from reference_data import resolve_model
 
@@ -32,6 +32,19 @@ _COOCCURRENCE_COLUMNS = [
     "as_of", "collection_query_version", "prompt_version", "catalog_version",
 ]
 
+_CANDIDATE_EMERGING_COLUMNS = [
+    "vendor", "family", "version", "resolution_status", "group_label",
+    "recent_story_count", "previous_story_count", "mention_delta", "mention_growth",
+    "points_sum", "comments_sum",
+    "as_of", "collection_query_version", "catalog_version", "candidate_reason",
+]
+
+_CANDIDATE_COOCCURRENCE_COLUMNS = [
+    "vendor_a", "family_a", "version_a", "vendor_b", "family_b", "version_b",
+    "story_count",
+    "as_of", "collection_query_version", "catalog_version", "candidate_reason",
+]
+
 _FRAMING_COLUMNS = [
     "vendor", "family", "version", "resolution_status", "group_label",
     "stance", "story_count",
@@ -42,6 +55,12 @@ _OBSERVATION_COLUMNS = [
     "story_id", "surface", "resolution_status", "vendor", "family", "version",
     "model_id", "attributes", "prompt_version", "created_at_i", "points",
     "num_comments", "collection_query_version",
+]
+
+_CANDIDATE_MENTION_COLUMNS = [
+    "story_id", "model_id", "vendor", "family", "version", "resolution_status",
+    "candidate_reason", "catalog_version", "created_at_i", "points", "num_comments",
+    "collection_query_version",
 ]
 
 _REVIEW_COLUMNS = [
@@ -183,6 +202,93 @@ def _load_verified_observations(conn: sqlite3.Connection) -> pd.DataFrame:
     obs_df = obs_df.dropna(subset=["created_at_i"])
     obs_df["created_at_i"] = obs_df["created_at_i"].astype(int)
     return obs_df[_OBSERVATION_COLUMNS].reset_index(drop=True)
+
+
+def _load_candidate_mentions(conn: sqlite3.Connection) -> pd.DataFrame:
+    """현재 catalog 버전의 후보 model ID를 story·catalog 메타데이터에 연결한다.
+
+    후보는 catalog alias 매칭 결과이므로, Silver extraction이나 모델 응답을 읽지
+    않는다. catalog가 아직 비어 있고 후보도 없으면 초기 상태의 빈 frame을 준다.
+    """
+    has_candidates = conn.execute(
+        "SELECT 1 FROM story_candidates LIMIT 1"
+    ).fetchone()
+    if has_candidates is None:
+        return pd.DataFrame(columns=_CANDIDATE_MENTION_COLUMNS)
+
+    current_catalog_version = catalog_version(conn)
+    candidates = pd.read_sql_query(
+        """
+        SELECT
+            sc.story_id,
+            sc.candidate_reason,
+            sc.matched_model_ids,
+            sc.catalog_version,
+            s.created_at_i,
+            s.points,
+            s.num_comments,
+            s.collection_query_version
+        FROM story_candidates sc
+        JOIN stories s ON s.id = sc.story_id
+        WHERE sc.catalog_version = ?
+        """,
+        conn,
+        params=(current_catalog_version,),
+    )
+    if candidates.empty:
+        return pd.DataFrame(columns=_CANDIDATE_MENTION_COLUMNS)
+
+    catalog = pd.read_sql_query(
+        """
+        SELECT model_id, vendor, family, version
+        FROM model_catalog
+        WHERE catalog_version = ?
+        """,
+        conn,
+        params=(current_catalog_version,),
+    ).set_index("model_id")
+
+    rows = []
+    for _, candidate in candidates.iterrows():
+        try:
+            model_ids = json.loads(candidate["matched_model_ids"])
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(model_ids, list):
+            continue
+        seen_model_ids = set()
+        for model_id in model_ids:
+            if not isinstance(model_id, str) or model_id in seen_model_ids:
+                continue
+            seen_model_ids.add(model_id)
+            if model_id not in catalog.index:
+                continue
+            model = catalog.loc[model_id]
+            rows.append(
+                {
+                    "story_id": candidate["story_id"],
+                    "model_id": model_id,
+                    "vendor": model["vendor"],
+                    "family": model["family"],
+                    "version": model["version"],
+                    "resolution_status": "resolved",
+                    "candidate_reason": candidate["candidate_reason"],
+                    "catalog_version": candidate["catalog_version"],
+                    "created_at_i": candidate["created_at_i"],
+                    "points": candidate["points"],
+                    "num_comments": candidate["num_comments"],
+                    "collection_query_version": candidate["collection_query_version"],
+                }
+            )
+
+    if not rows:
+        return pd.DataFrame(columns=_CANDIDATE_MENTION_COLUMNS)
+
+    mentions = pd.DataFrame(rows)
+    mentions["created_at_i"] = mentions["created_at_i"].astype(int)
+    mentions["points"] = mentions["points"].fillna(0).astype(int)
+    mentions["num_comments"] = mentions["num_comments"].fillna(0).astype(int)
+    return mentions[_CANDIDATE_MENTION_COLUMNS].reset_index(drop=True)
 
 
 def _add_group_columns(df: pd.DataFrame, group_level: str) -> pd.DataFrame:
@@ -341,6 +447,132 @@ def model_cooccurrence(
     for key, value in meta.items():
         result[key] = value
     return result[_COOCCURRENCE_COLUMNS]
+
+
+def candidate_emerging_models(
+    conn: sqlite3.Connection,
+    as_of,
+    group_level: str,
+    window_hours: int = 24,
+    min_recent_count: int = 2,
+    top_n: int = 20,
+) -> pd.DataFrame:
+    """catalog alias 후보의 story 기준 최근/직전 언급 증가량을 집계한다.
+
+    후보 Gold는 Silver extraction과 독립적이며, sentiment나 stance를 만들지 않는다.
+    시간창과 정렬은 ``emerging_models``와 동일하게 유지한다.
+    """
+    _validate_group_level(group_level)
+    as_of_ts = _parse_as_of(as_of)
+    window_seconds = window_hours * 3600
+    recent_start, recent_end = as_of_ts - window_seconds, as_of_ts
+    previous_start, previous_end = recent_start - window_seconds, recent_start
+
+    mentions = _load_candidate_mentions(conn)
+    if mentions.empty:
+        return pd.DataFrame(columns=_CANDIDATE_EMERGING_COLUMNS)
+
+    grouped = _add_group_columns(mentions, group_level)
+    dedup = grouped.drop_duplicates(subset=["story_id", "group_key"])
+    recent = dedup[
+        (dedup["created_at_i"] >= recent_start) & (dedup["created_at_i"] < recent_end)
+    ]
+    previous = dedup[
+        (dedup["created_at_i"] >= previous_start) & (dedup["created_at_i"] < previous_end)
+    ]
+    if recent.empty:
+        return pd.DataFrame(columns=_CANDIDATE_EMERGING_COLUMNS)
+
+    recent_agg = recent.groupby("group_key").agg(
+        recent_story_count=("story_id", "nunique"),
+        points_sum=("points", "sum"),
+        comments_sum=("num_comments", "sum"),
+    )
+    previous_counts = previous.groupby("group_key")["story_id"].nunique()
+    recent_agg["previous_story_count"] = (
+        recent_agg.index.map(previous_counts).fillna(0).astype(int)
+    )
+    recent_agg["mention_delta"] = (
+        recent_agg["recent_story_count"] - recent_agg["previous_story_count"]
+    )
+    recent_agg["mention_growth"] = (
+        recent_agg["mention_delta"]
+        / recent_agg["previous_story_count"].clip(lower=1)
+    )
+    recent_agg = recent_agg[recent_agg["recent_story_count"] >= min_recent_count]
+    if recent_agg.empty:
+        return pd.DataFrame(columns=_CANDIDATE_EMERGING_COLUMNS)
+
+    group_info = grouped.drop_duplicates(subset="group_key").set_index("group_key")[
+        ["vendor", "family", "version", "resolution_status", "group_label"]
+    ]
+    result = recent_agg.join(group_info).reset_index(drop=True)
+    result = result.sort_values(
+        ["mention_delta", "recent_story_count"], ascending=[False, False]
+    ).head(top_n).reset_index(drop=True)
+    result["as_of"] = as_of
+    result["collection_query_version"] = _single_or_joined(
+        mentions["collection_query_version"].dropna().unique().tolist()
+    )
+    result["catalog_version"] = _single_or_joined(
+        mentions["catalog_version"].dropna().unique().tolist()
+    )
+    result["candidate_reason"] = "catalog_alias_match"
+    return result[_CANDIDATE_EMERGING_COLUMNS]
+
+
+def candidate_model_cooccurrence(
+    conn: sqlite3.Connection, as_of, group_level: str, min_count: int = 2
+) -> pd.DataFrame:
+    """catalog alias 후보의 서로 다른 모델 그룹 쌍을 story당 한 번만 센다.
+
+    pair 생성·중복 제거·최소 빈도 규칙은 ``model_cooccurrence``와 같으며,
+    candidate 입력은 모두 catalog에 연결된 resolved 모델이다.
+    """
+    _validate_group_level(group_level)
+    mentions = _load_candidate_mentions(conn)
+    if mentions.empty:
+        return pd.DataFrame(columns=_CANDIDATE_COOCCURRENCE_COLUMNS)
+
+    grouped = _add_group_columns(mentions, group_level)
+    dedup = grouped.drop_duplicates(subset=["story_id", "group_key"])
+    group_info = {
+        row["group_key"]: (row["vendor"], row["family"], row["version"])
+        for _, row in dedup.drop_duplicates(subset="group_key").iterrows()
+    }
+
+    pair_counts: dict[tuple, int] = {}
+    for _, sub in dedup.groupby("story_id"):
+        keys = sorted(sub["group_key"].unique())
+        for key_a, key_b in itertools.combinations(keys, 2):
+            pair_counts[(key_a, key_b)] = pair_counts.get((key_a, key_b), 0) + 1
+
+    rows = []
+    for (key_a, key_b), count in pair_counts.items():
+        if count < min_count:
+            continue
+        vendor_a, family_a, version_a = group_info[key_a]
+        vendor_b, family_b, version_b = group_info[key_b]
+        rows.append(
+            {
+                "vendor_a": vendor_a, "family_a": family_a, "version_a": version_a,
+                "vendor_b": vendor_b, "family_b": family_b, "version_b": version_b,
+                "story_count": count,
+            }
+        )
+    if not rows:
+        return pd.DataFrame(columns=_CANDIDATE_COOCCURRENCE_COLUMNS)
+
+    result = pd.DataFrame(rows)
+    result["as_of"] = as_of
+    result["collection_query_version"] = _single_or_joined(
+        mentions["collection_query_version"].dropna().unique().tolist()
+    )
+    result["catalog_version"] = _single_or_joined(
+        mentions["catalog_version"].dropna().unique().tolist()
+    )
+    result["candidate_reason"] = "catalog_alias_match"
+    return result[_CANDIDATE_COOCCURRENCE_COLUMNS]
 
 
 def model_framing_sentiment(

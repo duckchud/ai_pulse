@@ -36,6 +36,8 @@ python candidate_selection.py unmatched-sample --sample-size 30 --seed 20260716
 ```
 
 - 후보 선별과 미매칭 샘플링은 오프라인 catalog 기반 명령이며 sentiment/stance를 의도적으로 포함하지 않는다.
+- 후보 Gold 집계는 `candidate_emerging_models`와 `candidate_model_cooccurrence`를 사용하며,
+  두 결과는 catalog alias 후보만 읽고 sentiment/stance를 의도적으로 포함하지 않는다.
 - 참조 데이터(`data/model_catalog.json`, `data/benchmark_results.json`)에 새 레코드를
   추가할 때는 반드시 출처 URL(source URL)을 포함해야 한다. 검증되지 않은 모델 출시일이나
   벤치마크 점수는 기입하지 않는다.

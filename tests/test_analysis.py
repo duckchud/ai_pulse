@@ -1,7 +1,15 @@
 import json
 
-from analysis import emerging_models, model_cooccurrence, model_framing_sentiment, review_sample
-from db import save_extraction
+from analysis import (
+    _load_candidate_mentions,
+    candidate_emerging_models,
+    candidate_model_cooccurrence,
+    emerging_models,
+    model_cooccurrence,
+    model_framing_sentiment,
+    review_sample,
+)
+from db import save_extraction, upsert_story_candidates
 from reference_data import import_catalog
 
 
@@ -31,6 +39,20 @@ def _import_catalog(conn, tmp_path, records, name="catalog.json"):
     path = tmp_path / name
     path.write_text(json.dumps(records))
     import_catalog(conn, path)
+
+
+def _candidate(conn, story_id, model_ids):
+    upsert_story_candidates(
+        conn,
+        [{
+            "story_id": story_id,
+            "catalog_version": "v1",
+            "candidate_reason": "catalog_alias_match",
+            "matched_model_ids": json.dumps(model_ids),
+            "evidence_json": json.dumps([]),
+            "selected_at": "2026-07-14T10:02:00Z",
+        }],
+    )
 
 
 def test_emerging_models_counts_distinct_stories_and_keeps_unresolved(temporary_db):
@@ -106,6 +128,52 @@ def test_model_cooccurrence_counts_distinct_pairs_once_per_story(temporary_db, t
     assert len(frame) == 1
     assert frame.iloc[0]["story_count"] == 2
     assert {frame.iloc[0]["vendor_a"], frame.iloc[0]["vendor_b"]} == {"OpenAI", "Anthropic"}
+
+
+def test_candidate_emerging_models_counts_one_story_once_per_family(temporary_db, tmp_path):
+    _import_catalog(temporary_db, tmp_path, [{
+        "model_id": "openai:gpt:5", "vendor": "OpenAI", "family": "GPT", "version": "5",
+        "released_on": None, "release_source_url": "https://example.test/gpt",
+        "catalog_version": "v1", "aliases": ["GPT-5"],
+    }])
+    _insert_story(temporary_db, "story-1", 1784023200)
+    _candidate(temporary_db, "story-1", ["openai:gpt:5"])
+    frame = candidate_emerging_models(temporary_db, "2026-07-14T12:00:00Z", "family", min_recent_count=1)
+    assert frame.iloc[0]["group_label"] == "OpenAI/GPT"
+    assert frame.iloc[0]["recent_story_count"] == 1
+    assert frame.iloc[0]["candidate_reason"] == "catalog_alias_match"
+    assert not {"prompt_version", "sentiment", "stance"} & set(frame.columns)
+
+
+def test_candidate_cooccurrence_counts_each_pair_once_per_story(temporary_db, tmp_path):
+    _import_catalog(temporary_db, tmp_path, [
+        {"model_id": "openai:gpt", "vendor": "OpenAI", "family": "GPT", "version": None, "released_on": None, "release_source_url": "https://example.test/gpt", "catalog_version": "v1", "aliases": ["GPT"]},
+        {"model_id": "anthropic:claude", "vendor": "Anthropic", "family": "Claude", "version": None, "released_on": None, "release_source_url": "https://example.test/claude", "catalog_version": "v1", "aliases": ["Claude"]},
+    ])
+    for story_id in ("story-1", "story-2"):
+        _insert_story(temporary_db, story_id, 1784023200)
+        _candidate(temporary_db, story_id, ["openai:gpt", "anthropic:claude"])
+    frame = candidate_model_cooccurrence(temporary_db, "2026-07-14T12:00:00Z", "family", min_count=2)
+    assert len(frame) == 1
+    assert frame.iloc[0]["story_count"] == 2
+    assert not {"prompt_version", "sentiment", "stance"} & set(frame.columns)
+
+
+def test_candidate_gold_returns_empty_frames_without_candidates(temporary_db):
+    assert candidate_emerging_models(temporary_db, "2026-07-14T12:00:00Z", "family").empty
+    assert candidate_model_cooccurrence(temporary_db, "2026-07-14T12:00:00Z", "family").empty
+
+
+def test_candidate_loader_returns_one_row_per_story_and_model_id(temporary_db, tmp_path):
+    _import_catalog(temporary_db, tmp_path, [{
+        "model_id": "openai:gpt:5", "vendor": "OpenAI", "family": "GPT", "version": "5",
+        "released_on": None, "release_source_url": "https://example.test/gpt",
+        "catalog_version": "v1", "aliases": ["GPT-5"],
+    }])
+    _insert_story(temporary_db, "story-1", 1784023200)
+    _candidate(temporary_db, "story-1", ["openai:gpt:5", "openai:gpt:5"])
+    mentions = _load_candidate_mentions(temporary_db)
+    assert len(mentions) == 1
 
 
 def test_model_framing_sentiment_preserves_original_stance_labels(temporary_db, tmp_path):
