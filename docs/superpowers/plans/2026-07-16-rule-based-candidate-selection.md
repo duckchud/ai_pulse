@@ -156,7 +156,7 @@ Run `pytest tests/test_candidate_selection.py -q`, then `pytest -q`; both must p
 
 **Interfaces:**
 - Produces `unmatched_sample(conn: sqlite3.Connection, sample_size: int, seed: int) -> list[dict[str, object]]`.
-- Produces `python candidate_selection.py select` and `python candidate_selection.py unmatched-sample --sample-size 30 --seed 20260716`.
+- Produces `python3 candidate_selection.py select` and `python3 candidate_selection.py unmatched-sample --sample-size 30 --seed 20260716`.
 
 - [ ] **Step 1: Write the failing unmatched-sample tests**
 
@@ -184,11 +184,11 @@ Implement `unmatched_sample` to reject `sample_size < 1`, query all `stories` le
 
 Implement `argparse` required subcommands. `select` calls `migrate`, `select_candidates`, then prints `후보 선별 완료: N건`. `unmatched-sample` accepts positive `--sample-size` and integer `--seed`, then prints `json.dumps(unmatched_sample(...), ensure_ascii=False)`. Both commands use `DB_PATH`, close connections in `finally`, and contain no network/model code.
 
-Add README examples directly after the session-enrichment commands: `python candidate_selection.py select` and `python candidate_selection.py unmatched-sample --sample-size 30 --seed 20260716`. State that these commands are offline, catalog-driven, and intentionally omit sentiment/stance.
+Add README examples directly after the session-enrichment commands: `python3 candidate_selection.py select` and `python3 candidate_selection.py unmatched-sample --sample-size 30 --seed 20260716`. State that these commands are offline, catalog-driven, and intentionally omit sentiment/stance.
 
 - [ ] **Step 3: Verify and commit the CLI task**
 
-Run `pytest tests/test_candidate_selection.py -q`, `python candidate_selection.py --help`, `python candidate_selection.py unmatched-sample --help`, and `pytest -q`. All must pass and both help commands must exit 0. Stage only candidate CLI/tests/README hunks, inspect them, and commit `feat: add offline candidate selection workflow`.
+Run `pytest tests/test_candidate_selection.py -q`, `python3 candidate_selection.py --help`, `python3 candidate_selection.py unmatched-sample --help`, and `pytest -q`. All must pass and both help commands must exit 0. Stage only candidate CLI/tests/README hunks, inspect them, and commit `feat: add offline candidate selection workflow`.
 
 ### Task 4: Add candidate-based Gold trend and co-occurrence functions
 
@@ -265,7 +265,7 @@ Run `pytest tests/test_analysis.py -q` and `pytest -q`; both must pass. Add a RE
 
 - [ ] **Step 1: Create a disposable DB and seed deterministic records**
 
-Run the following using a temporary path outside the repository; use a short `python -c` command to call `connect`, `migrate`, `import_catalog`, and insert two stories: one titled `GPT and Claude`, one titled `unrelated story`. The former must be candidate-eligible; the latter must remain unmatched. Do not write to `ai_monitor.db`.
+Run the following using a temporary path outside the repository; use a short `python3 -c` command to call `connect`, `migrate`, `import_catalog`, and insert two stories: one titled `GPT and Claude`, one titled `unrelated story`. The former must be candidate-eligible; the latter must remain unmatched. Do not write to `ai_monitor.db`.
 
 - [ ] **Step 2: Exercise the public functions without a model call**
 
@@ -273,7 +273,7 @@ Using `connect(temp_db)`, call `select_candidates(conn)` and `unmatched_sample(c
 
 - [ ] **Step 3: Run complete offline verification**
 
-Run `python -m compileall candidate_selection.py analysis.py db.py`, `pytest -q`, and `git diff --check`. Expected: compilation and all tests pass with no network access and no whitespace errors.
+Run `python3 -m compileall candidate_selection.py analysis.py db.py`, `pytest -q`, and `git diff --check`. Expected: compilation and all tests pass with no network access and no whitespace errors.
 
 - [ ] **Step 4: Clean up and commit only documentation correction if needed**
 

@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from reference_data import normalize_alias
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS stories (
     id               TEXT PRIMARY KEY,
@@ -172,7 +174,14 @@ def upsert_story_candidates(
         return
 
     _validate_story_candidates(conn, candidates)
-    _write_story_candidates(conn, candidates)
+    conn.execute("SAVEPOINT upsert_story_candidates")
+    try:
+        _write_story_candidates(conn, candidates)
+    except Exception:
+        conn.execute("ROLLBACK TO SAVEPOINT upsert_story_candidates")
+        conn.execute("RELEASE SAVEPOINT upsert_story_candidates")
+        raise
+    conn.execute("RELEASE SAVEPOINT upsert_story_candidates")
     conn.commit()
 
 
@@ -214,7 +223,21 @@ def _validate_story_candidates(
         row["id"]: row
         for row in conn.execute("SELECT id, title, text FROM stories")
     }
+    aliases = {
+        row["alias_normalized"]: row["model_id"]
+        for row in conn.execute("SELECT alias_normalized, model_id FROM model_aliases")
+    }
     for candidate in candidates:
+        if not isinstance(candidate, dict):
+            raise ValueError("candidate must be an object")
+        for field_name in (
+            "story_id",
+            "catalog_version",
+            "candidate_reason",
+            "selected_at",
+        ):
+            if not isinstance(candidate.get(field_name), str) or not candidate[field_name]:
+                raise ValueError(f"candidate {field_name} must be a non-empty string")
         story = stories.get(candidate["story_id"])
         if story is None:
             raise ValueError("candidate story_id must refer to an existing story")
@@ -228,6 +251,8 @@ def _validate_story_candidates(
             raise ValueError("matched_model_ids must exist in the current catalog")
 
         evidence = _json_array(candidate["evidence_json"], "evidence_json")
+        if not evidence:
+            raise ValueError("evidence_json must contain at least one evidence entry")
         for item in evidence:
             if not isinstance(item, dict):
                 raise ValueError("evidence_json entries must be objects")
@@ -239,6 +264,8 @@ def _validate_story_candidates(
                 raise ValueError("evidence model_id must be in matched_model_ids")
             if not isinstance(alias, str) or not alias:
                 raise ValueError("evidence alias must be a non-empty string")
+            if aliases.get(normalize_alias(alias)) != model_id:
+                raise ValueError("evidence alias must resolve to its model_id")
             if field not in ("title", "text"):
                 raise ValueError("evidence field must be title or text")
             if not isinstance(quote, str) or not quote:

@@ -44,6 +44,16 @@ def _import_catalog(conn, tmp_path, records, name="catalog.json"):
 
 
 def _candidate(conn, story_id, model_ids):
+    aliases = [
+        dict(conn.execute(
+            "SELECT alias_normalized FROM model_aliases WHERE model_id = ? "
+            "ORDER BY alias_normalized LIMIT 1",
+            (model_id,),
+        ).fetchone())
+        for model_id in model_ids
+    ]
+    title = " ".join(alias["alias_normalized"] for alias in aliases)
+    conn.execute("UPDATE stories SET title = ? WHERE id = ?", (title, story_id))
     upsert_story_candidates(
         conn,
         [{
@@ -51,7 +61,15 @@ def _candidate(conn, story_id, model_ids):
             "catalog_version": "v1",
             "candidate_reason": "catalog_alias_match",
             "matched_model_ids": json.dumps(model_ids),
-            "evidence_json": json.dumps([]),
+            "evidence_json": json.dumps([
+                {
+                    "model_id": model_id,
+                    "alias": alias["alias_normalized"],
+                    "field": "title",
+                    "quote": alias["alias_normalized"],
+                }
+                for model_id, alias in zip(model_ids, aliases)
+            ]),
             "selected_at": "2026-07-14T10:02:00Z",
         }],
     )

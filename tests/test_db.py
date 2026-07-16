@@ -1,4 +1,5 @@
 import json
+import sqlite3
 
 import pytest
 
@@ -76,19 +77,24 @@ def test_latest_successful_extraction_tie_break_is_deterministic(temporary_db):
 
 def test_candidates_upsert_per_catalog_version(temporary_db):
     temporary_db.execute(
-        "INSERT INTO stories (id, source, fetched_at) "
-        "VALUES ('story-1', 'hackernews', '2026-07-16T00:00:00Z')"
+        "INSERT INTO stories (id, source, title, fetched_at) "
+        "VALUES ('story-1', 'hackernews', 'GPT announcement', '2026-07-16T00:00:00Z')"
     )
     temporary_db.execute(
         "INSERT INTO model_catalog (model_id, vendor, family, release_source_url, catalog_version) "
         "VALUES ('openai:gpt', 'OpenAI', 'GPT', 'https://example.test/gpt', 'v1')"
+    )
+    temporary_db.execute(
+        "INSERT INTO model_aliases (alias_normalized, model_id) VALUES ('gpt', 'openai:gpt')"
     )
     row = {
         "story_id": "story-1",
         "catalog_version": "v1",
         "candidate_reason": "catalog_alias_match",
         "matched_model_ids": json.dumps(["openai:gpt"]),
-        "evidence_json": "[]",
+        "evidence_json": json.dumps([
+            {"model_id": "openai:gpt", "alias": "GPT", "field": "title", "quote": "GPT"}
+        ]),
         "selected_at": "2026-07-16T00:00:00Z",
     }
     upsert_story_candidates(temporary_db, [row])
@@ -135,6 +141,9 @@ def candidate_validation_db(temporary_db):
         "INSERT INTO model_catalog (model_id, vendor, family, release_source_url, catalog_version) "
         "VALUES ('openai:gpt', 'OpenAI', 'GPT', 'https://example.test/gpt', 'v1')"
     )
+    temporary_db.execute(
+        "INSERT INTO model_aliases (alias_normalized, model_id) VALUES ('gpt', 'openai:gpt')"
+    )
     temporary_db.commit()
     return temporary_db
 
@@ -144,6 +153,8 @@ def candidate_validation_db(temporary_db):
     [
         (_candidate_row(matched_model_ids="not-json"), "matched_model_ids must be a JSON array"),
         (_candidate_row(evidence_json="not-json"), "evidence_json must be a JSON array"),
+        (_candidate_row(evidence_json=json.dumps([])), "at least one evidence"),
+        (_candidate_row(selected_at=None), "selected_at must be a non-empty string"),
         (_candidate_row(matched_model_ids=json.dumps(["openai:gpt", "openai:gpt"])), "unique"),
         (_candidate_row(matched_model_ids=json.dumps(["unknown:model"])), "current catalog"),
         (_candidate_row(evidence_json=json.dumps([
@@ -155,6 +166,9 @@ def candidate_validation_db(temporary_db):
         (_candidate_row(evidence_json=json.dumps([
             {"model_id": "unknown:model", "alias": "Unknown", "field": "title", "quote": "GPT"}
         ])), "matched_model_ids"),
+        (_candidate_row(evidence_json=json.dumps([
+            {"model_id": "openai:gpt", "alias": "Fabricated", "field": "title", "quote": "GPT"}
+        ])), "resolve to its model_id"),
     ],
 )
 def test_candidate_persistence_rejects_invalid_payloads(candidate_validation_db, row, message):
@@ -169,6 +183,21 @@ def test_candidate_persistence_rolls_back_an_entire_invalid_batch(candidate_vali
 
     with pytest.raises(ValueError, match="current catalog"):
         upsert_story_candidates(candidate_validation_db, [valid, invalid])
+    assert candidate_validation_db.execute("SELECT COUNT(*) FROM story_candidates").fetchone()[0] == 0
+
+
+def test_candidate_persistence_rolls_back_on_database_error(candidate_validation_db):
+    candidate_validation_db.execute(
+        "CREATE TRIGGER reject_second_candidate BEFORE INSERT ON story_candidates "
+        "WHEN NEW.selected_at = 'reject' BEGIN SELECT RAISE(ABORT, 'reject candidate'); END"
+    )
+
+    with pytest.raises(sqlite3.IntegrityError, match="reject candidate"):
+        upsert_story_candidates(candidate_validation_db, [
+            _candidate_row(selected_at="2026-07-16T00:00:00Z"),
+            _candidate_row("story-2", selected_at="reject"),
+        ])
+
     assert candidate_validation_db.execute("SELECT COUNT(*) FROM story_candidates").fetchone()[0] == 0
 
 
