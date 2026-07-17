@@ -106,3 +106,47 @@ def resolve_model(conn: sqlite3.Connection, surface: str) -> dict | None:
         (normalize_alias(surface),),
     ).fetchone()
     return dict(row) if row is not None else None
+
+
+# 카드 끝에 고정 포함하는 open-world 규칙. 카드는 지식 주입이지 스키마 제약이 아니다.
+CONTEXT_CARD_RULE = (
+    "이 목록은 참고용 지식이다. 목록에 없는 이름은 카탈로그에 끼워 맞추지 말고 "
+    "surface 그대로 기록해 unresolved로 보존한다."
+)
+
+
+def render_context_card(conn: sqlite3.Connection) -> str:
+    """model_catalog + model_aliases를 세션 주입용 컨텍스트 카드 텍스트로 만든다.
+
+    빈 카탈로그면 ""를 반환하고, catalog_version이 2개 이상이면 ValueError.
+    정렬이 결정적이라 같은 카탈로그는 항상 같은 카드를 만든다.
+    """
+    from db import catalog_version  # db.py가 이 모듈을 임포트하므로 순환 임포트 방지 위해 지연 임포트
+
+    models = conn.execute(
+        """
+        SELECT model_id, vendor, family, version, released_on
+        FROM model_catalog
+        ORDER BY vendor, family, version, model_id
+        """
+    ).fetchall()
+    if not models:
+        return ""
+
+    aliases: dict[str, list[str]] = {}
+    for row in conn.execute(
+        "SELECT model_id, alias_normalized FROM model_aliases ORDER BY alias_normalized"
+    ):
+        aliases.setdefault(row["model_id"], []).append(row["alias_normalized"])
+
+    lines = [f"Model catalog context (catalog_version: {catalog_version(conn)})"]
+    for model in models:
+        name = f"{model['vendor']} {model['family']}"
+        if model["version"]:
+            name += f" {model['version']}"
+        if model["released_on"]:
+            name += f" (released {model['released_on']})"
+        model_aliases = ", ".join(aliases.get(model["model_id"], []))
+        lines.append(f"- {name} — aliases: {model_aliases}" if model_aliases else f"- {name}")
+    lines.append(CONTEXT_CARD_RULE)
+    return "\n".join(lines)
