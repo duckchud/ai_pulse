@@ -132,7 +132,11 @@ def test_search_keyword_sends_half_open_interval_filter():
 
 
 def test_search_keyword_splits_capped_slice_into_two_halves():
-    capped = {"hits": [{"objectID": "junk", "created_at_i": 110}], "nbPages": collector.ALGOLIA_MAX_PAGES}
+    capped = {
+        "hits": [{"objectID": "junk", "created_at_i": 110}],
+        "nbHits": collector.ALGOLIA_MAX_RESULTS + 1,
+        "nbPages": 10,
+    }
     left = {"hits": [{"objectID": "L", "created_at_i": 120}], "nbPages": 1}
     right = {"hits": [{"objectID": "R", "created_at_i": 170}], "nbPages": 1}
     session = _ScriptedSession([capped, left, right])
@@ -147,7 +151,7 @@ def test_search_keyword_splits_capped_slice_into_two_halves():
 
 def test_search_keyword_raises_when_one_second_slice_is_still_capped():
     session = _ScriptedSession(
-        [{"hits": [], "nbPages": collector.ALGOLIA_MAX_PAGES}]
+        [{"hits": [], "nbHits": collector.ALGOLIA_MAX_RESULTS + 1, "nbPages": 10}]
     )
     with pytest.raises(RuntimeError):
         collector.search_keyword(session, "GPT", 100, 101)

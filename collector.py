@@ -73,17 +73,23 @@ def backfill_slices(
 
 
 # ── 수집 ─────────────────────────────────────────────────────────
-# nbPages가 이 값에 닿으면 Algolia가 결과를 잘라낸 것으로 간주한다.
-ALGOLIA_MAX_PAGES = ALGOLIA_MAX_RESULTS // HITS_PER_PAGE
-
-
 def search_keyword(
     session: requests.Session, keyword: str, start_ts: int, end_ts: int
 ) -> list[dict]:
     """반열린 구간 [start_ts, end_ts)의 story를 모두 가져온다.
 
+    주의: 경계는 start-inclusive/end-exclusive다. backfill 슬라이싱이 gap-free하려면
+    슬라이스끼리 경계를 공유해야 하므로(포함/배제가 뒤섞이면 경계에 걸친 story가
+    조용히 누락된다), 증분(비-backfill) 경로도 이 함수를 그대로 공유한다. 그 결과
+    증분 경로는 이 기능 이전의 start-exclusive(created_at_i>watermark)에서
+    start-inclusive(created_at_i>=watermark)로 바뀌었지만, 최악의 경우 watermark
+    시각의 story 하나를 다시 가져오는 정도이고 upsert_stories가 idempotent하므로
+    무해한 1초 오버랩이다 — 결함이 아니다.
+
     Algolia는 쿼리당 페이지네이션 결과를 ALGOLIA_MAX_RESULTS건으로 제한하므로,
     한 구간이 한계에 닿으면 구간을 반으로 재귀 분할해 완전 수집을 보장한다.
+    nbHits(전체 매칭 건수, 페이지네이션 한계와 무관하게 정확한 값)로 판단해야
+    901~1000건처럼 실제로는 잘리지 않은 구간까지 불필요하게 재분할하지 않는다.
     1초 구간에서도 한계에 닿으면 RuntimeError — 조용한 유실 대신 실패를 택한다.
     """
     hits, page, n_pages = [], 0, 1
@@ -96,10 +102,11 @@ def search_keyword(
             "page": page,
         }
         resp = session.get(ALGOLIA_URL, params=params, timeout=20)
+        time.sleep(REQUEST_PAUSE_SECONDS)
         resp.raise_for_status()
         data = resp.json()
         n_pages = data.get("nbPages", 1)
-        if n_pages >= ALGOLIA_MAX_PAGES:
+        if data.get("nbHits", 0) > ALGOLIA_MAX_RESULTS:
             if end_ts - start_ts <= 1:
                 raise RuntimeError(
                     f"'{keyword}' 검색이 1초 구간 [{start_ts}, {end_ts})에서도 "
@@ -111,7 +118,6 @@ def search_keyword(
             )
         hits.extend(data.get("hits", []))
         page += 1
-        time.sleep(REQUEST_PAUSE_SECONDS)
     return hits
 
 
