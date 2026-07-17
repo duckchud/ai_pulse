@@ -41,14 +41,18 @@ implementation-architecture documents are historical context only.
 
 ```bash
 pip install -r requirements.txt
-python collector.py --backfill 3
-python session_enrich.py pending --limit 5
-python session_enrich.py save --story-id ID --raw-file PATH
-python candidate_selection.py select
+python3 collector.py --backfill 3
+python3 session_enrich.py pending --limit 5
+python3 session_enrich.py save --story-id ID --raw-file PATH
+python3 candidate_selection.py select
 pytest -q
 ```
 
 Never commit local databases or generated caches.
+
+The working tree has pervasive line-ending-only (CRLF/LF) diffs across many
+unrelated files. Always stage exact paths (`git add <file> <file>`), and
+check `git diff --cached --stat` before committing — never `git add -A`/`.`.
 
 ## Development conventions
 
