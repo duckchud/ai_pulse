@@ -24,8 +24,7 @@ The pipeline follows a Bronze / Silver / Gold structure.
 - **Gold — `analysis.py`**: Read-only pandas functions map raw observations to
   model family/version and calculate trends, co-occurrence, and framing.
 - **Presentation — `analysis.ipynb`**: Visualizes Gold outputs and includes a
-  manual sample-based review of LLM extraction accuracy. This notebook is not
-  yet implemented.
+  manual sample-based review of LLM extraction accuracy.
 
 The authoritative design is
 `docs/superpowers/specs/2026-07-14-ai-pulse-design.md`. The older brief and
@@ -45,6 +44,8 @@ pip install -r requirements.txt
 python collector.py --backfill 3
 python session_enrich.py pending --limit 5
 python session_enrich.py save --story-id ID --raw-file PATH
+python candidate_selection.py select
+pytest -q
 ```
 
 Never commit local databases or generated caches.
