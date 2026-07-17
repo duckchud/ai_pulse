@@ -10,6 +10,7 @@ from analysis import (
     model_cooccurrence,
     model_framing_sentiment,
     review_sample,
+    unresolved_surface_report,
 )
 from db import save_extraction, upsert_story_candidates
 from reference_data import import_catalog
@@ -339,3 +340,53 @@ def test_review_sample_handles_fewer_rows_than_sample_size(temporary_db):
     second = review_sample(temporary_db, sample_size=30, seed=20260714)
     assert first["story_id"].tolist() == ["story-1"]
     assert first["story_id"].tolist() == second["story_id"].tolist()
+
+
+def test_unresolved_surface_report_counts_model_and_product_surfaces_only(temporary_db):
+    _insert_story(temporary_db, "story-1", created_at_i=1784023200)
+    _insert_story(temporary_db, "story-2", created_at_i=1784023300)
+    _save(temporary_db, "story-1", [
+        {"surface": "Fable 5", "evidence_verified": True, "attributes": {"kind": "model"}},
+        {"surface": "OpenAI", "evidence_verified": True, "attributes": {"kind": "organization"}},
+    ])
+    _save(temporary_db, "story-2", [
+        {"surface": "Fable 5", "evidence_verified": True, "attributes": {"kind": "model"}},
+        {"surface": "Claude Cowork", "evidence_verified": True, "attributes": {"kind": "product"}},
+    ])
+    report = unresolved_surface_report(temporary_db)
+    assert list(report.columns) == ["surface", "mention_count"]
+    assert report.set_index("surface")["mention_count"].to_dict() == {
+        "Fable 5": 2, "Claude Cowork": 1,
+    }
+    assert "OpenAI" not in set(report["surface"])
+
+
+def test_unresolved_surface_report_excludes_resolved_surfaces(temporary_db, tmp_path):
+    _import_catalog(temporary_db, tmp_path, [{
+        "model_id": "openai:gpt:5", "vendor": "OpenAI", "family": "GPT", "version": "5",
+        "released_on": "2026-01-01", "release_source_url": "https://openai.example/gpt5",
+        "catalog_version": "v1", "aliases": ["GPT-5"],
+    }])
+    _insert_story(temporary_db, "story-1", created_at_i=1784023200)
+    _save(temporary_db, "story-1", [
+        {"surface": "GPT-5", "evidence_verified": True, "attributes": {"kind": "model"}},
+        {"surface": "Fable 5", "evidence_verified": True, "attributes": {"kind": "model"}},
+    ])
+    report = unresolved_surface_report(temporary_db)
+    assert report["surface"].tolist() == ["Fable 5"]
+
+
+def test_unresolved_surface_report_respects_top_n(temporary_db):
+    _insert_story(temporary_db, "story-1", created_at_i=1784023200)
+    _save(temporary_db, "story-1", [
+        {"surface": "Model A", "evidence_verified": True, "attributes": {"kind": "model"}},
+        {"surface": "Model B", "evidence_verified": True, "attributes": {"kind": "model"}},
+    ])
+    report = unresolved_surface_report(temporary_db, top_n=1)
+    assert len(report) == 1
+
+
+def test_unresolved_surface_report_empty_when_no_extractions(temporary_db):
+    report = unresolved_surface_report(temporary_db)
+    assert report.empty
+    assert list(report.columns) == ["surface", "mention_count"]

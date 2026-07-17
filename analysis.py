@@ -611,6 +611,35 @@ def model_framing_sentiment(
     return result[_FRAMING_COLUMNS]
 
 
+def unresolved_surface_report(conn: sqlite3.Connection, top_n: int = 20) -> pd.DataFrame:
+    """카탈로그 보강 대상을 찾기 위해 model/product 미해결 surface를 언급 빈도순으로 모은다.
+
+    organization/category 등 model_catalog 대상이 아닌 kind는 제외한다.
+    resolved surface도 제외한다(이미 카탈로그에 있으므로 보강 대상이 아님).
+    """
+    obs_df = _load_verified_observations(conn)
+    if obs_df.empty:
+        return pd.DataFrame(columns=["surface", "mention_count"])
+
+    is_model_or_product = obs_df["attributes"].apply(
+        lambda attrs: isinstance(attrs, dict) and attrs.get("kind") in ("model", "product")
+    )
+    unresolved = obs_df[(obs_df["resolution_status"] == "unresolved") & is_model_or_product]
+    if unresolved.empty:
+        return pd.DataFrame(columns=["surface", "mention_count"])
+
+    counts = (
+        unresolved.groupby("surface")
+        .size()
+        .rename("mention_count")
+        .reset_index()
+        .sort_values(["mention_count", "surface"], ascending=[False, True])
+        .head(top_n)
+        .reset_index(drop=True)
+    )
+    return counts[["surface", "mention_count"]]
+
+
 def review_sample(conn: sqlite3.Connection, sample_size: int, seed: int) -> pd.DataFrame:
     """수동 정확도 검토용 고정 시드 표본을 성공한 최신 extraction에서 뽑는다.
 
