@@ -180,6 +180,31 @@ def collect(
     return len(rows), max_ts
 
 
+def collect_backfill(
+    conn: sqlite3.Connection,
+    session: requests.Session,
+    since_ts: int,
+    until_ts: int,
+) -> int:
+    """모든 검색어×구간 요청이 성공한 뒤에만 한 번에 upsert한다.
+
+    watermark는 절대 건드리지 않는다. 요청 하나라도 실패하면 예외가 전파되어
+    부분 수집 결과가 DB에 남지 않는다(upsert가 idempotent하므로 재실행이 안전하다).
+    """
+    slices = backfill_slices(since_ts, until_ts, BACKFILL_SLICE_DAYS * 86_400)
+    hits_by_keyword: dict[str, list[dict]] = {}
+    for keyword in KEYWORDS:
+        keyword_hits: list[dict] = []
+        for start_ts, end_ts in slices:
+            keyword_hits.extend(search_keyword(session, keyword, start_ts, end_ts))
+        hits_by_keyword[keyword] = keyword_hits
+        print(f"  · '{keyword}' 검색 완료 ({len(keyword_hits)}건)")
+
+    rows = merge_hits(hits_by_keyword)
+    upsert_stories(conn, rows)
+    return len(rows)
+
+
 # ── main ─────────────────────────────────────────────────────────
 def main() -> None:
     parser = argparse.ArgumentParser(description="HackerNews AI 담론 수집기")
@@ -201,7 +226,7 @@ def main() -> None:
     if args.backfill is not None:
         since_ts = int((now - timedelta(days=args.backfill)).timestamp())
         print(f"[backfill] 최근 {args.backfill}일 재수집 (since {since_ts})")
-        n_rows, max_ts = collect(conn, session, since_ts, until_ts, update_watermark=False)
+        n_rows = collect_backfill(conn, session, since_ts, until_ts)
     else:
         watermark = get_watermark(conn)
         if watermark is None:

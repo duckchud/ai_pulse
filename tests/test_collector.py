@@ -151,3 +151,52 @@ def test_search_keyword_raises_when_one_second_slice_is_still_capped():
     )
     with pytest.raises(RuntimeError):
         collector.search_keyword(session, "GPT", 100, 101)
+
+
+# ── collect_backfill: 전량 성공 후에만 upsert ────────────────────
+def test_collect_backfill_upserts_and_keeps_watermark(temporary_db):
+    set_watermark(temporary_db, "1000")
+    session = _FakeSession([{"objectID": "a", "created_at_i": 9_000}])
+
+    processed = collector.collect_backfill(temporary_db, session, 0, 14 * 86_400)
+
+    assert processed == 1
+    assert get_watermark(temporary_db) == "1000"
+    assert temporary_db.execute("SELECT COUNT(*) FROM stories").fetchone()[0] == 1
+
+
+def test_collect_backfill_writes_nothing_when_a_late_request_fails(temporary_db):
+    class _FailsAfter:
+        """앞 몇 요청은 성공하고 그 뒤부터 실패하는 세션."""
+
+        def __init__(self, fail_after):
+            self.fail_after = fail_after
+            self.count = 0
+
+        def get(self, url, params=None, timeout=None):
+            self.count += 1
+            if self.count > self.fail_after:
+                raise RuntimeError("simulated HTTP failure")
+            return _FakeResponse(
+                {"hits": [{"objectID": "a", "created_at_i": 100}], "nbPages": 1}
+            )
+
+    session = _FailsAfter(fail_after=3)
+
+    with pytest.raises(RuntimeError):
+        collector.collect_backfill(temporary_db, session, 0, 14 * 86_400)
+
+    assert temporary_db.execute("SELECT COUNT(*) FROM stories").fetchone()[0] == 0
+    assert get_watermark(temporary_db) is None
+
+
+def test_collect_backfill_queries_every_slice_for_every_keyword(temporary_db):
+    session = _ScriptedSession(
+        [{"hits": [], "nbPages": 1}] * (len(collector.KEYWORDS) * 2)
+    )
+
+    collector.collect_backfill(temporary_db, session, 0, 14 * 86_400)
+
+    # 14일 범위 → 7일 구간 2개 × 키워드 수만큼 요청한다.
+    assert len(session.calls) == len(collector.KEYWORDS) * 2
+    assert session.calls[0]["numericFilters"] == f"created_at_i>=0,created_at_i<{7 * 86_400}"
