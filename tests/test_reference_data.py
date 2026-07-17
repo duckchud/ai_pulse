@@ -201,3 +201,31 @@ def test_render_context_card_rejects_mixed_catalog_versions(temporary_db):
         )
     with pytest.raises(ValueError):
         render_context_card(temporary_db)
+
+
+def test_render_context_card_model_with_zero_aliases_has_no_alias_suffix(tmp_path, temporary_db):
+    path = tmp_path / "catalog.json"
+    records = [
+        {
+            "model_id": "vendor:model",
+            "vendor": "Vendor",
+            "family": "Model",
+            "version": None,
+            "released_on": None,
+            "release_source_url": "https://vendor.example/model",
+            "catalog_version": "v1",
+            "aliases": [],  # Zero aliases
+        },
+    ]
+    path.write_text(json.dumps(records))
+    import_catalog(temporary_db, path)
+
+    card = render_context_card(temporary_db)
+    lines = card.splitlines()
+
+    # Find the model line (it's between the header and the rule)
+    model_lines = [l for l in lines if l.startswith("- Vendor Model")]
+    assert len(model_lines) == 1
+
+    # Should be exactly "- Vendor Model" with no aliases suffix
+    assert model_lines[0] == "- Vendor Model"
