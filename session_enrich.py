@@ -14,6 +14,7 @@ from enrich import (
     parse_envelope,
     verify_evidence,
 )
+from reference_data import render_context_card
 
 
 def pending_stories(
@@ -166,11 +167,16 @@ def main() -> None:
     try:
         migrate(conn)
         if args.command == "pending":
+            # 카드는 배치당 1회만 머리에 싣는다. 빈 카탈로그면 null.
+            card = render_context_card(conn)
             print(
                 json.dumps(
-                    pending_stories(
-                        conn, args.limit, args.from_candidates, args.seed
-                    ),
+                    {
+                        "context_card": card or None,
+                        "stories": pending_stories(
+                            conn, args.limit, args.from_candidates, args.seed
+                        ),
+                    },
                     ensure_ascii=False,
                 )
             )

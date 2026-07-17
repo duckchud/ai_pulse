@@ -5,6 +5,8 @@ import sys
 import pytest
 
 import session_enrich
+from db import connect, migrate
+from reference_data import import_catalog
 
 
 def _insert_story(conn, story_id: str, title: str, text: str) -> None:
@@ -220,3 +222,53 @@ def test_pending_stories_excludes_already_extracted_story(temporary_db):
     rows = session_enrich.pending_stories(temporary_db, limit=5)
 
     assert [row["story_id"] for row in rows] == ["1"]
+
+
+def _run_pending_cli(monkeypatch, capsys, db_path) -> dict:
+    monkeypatch.setattr(session_enrich, "DB_PATH", db_path)
+    monkeypatch.setattr(sys, "argv", ["session_enrich.py", "pending", "--limit", "2"])
+    session_enrich.main()
+    return json.loads(capsys.readouterr().out)
+
+
+def test_pending_cli_wraps_stories_with_context_card(tmp_path, monkeypatch, capsys):
+    db_path = tmp_path / "cli.db"
+    conn = connect(db_path)
+    migrate(conn)
+    _insert_story(conn, "11", "GPT-5 rumor", "body")
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps([
+        {
+            "model_id": "openai:gpt:5",
+            "vendor": "OpenAI",
+            "family": "GPT",
+            "version": "5",
+            "released_on": None,
+            "release_source_url": "https://openai.example/gpt-5",
+            "catalog_version": "v1",
+            "aliases": ["GPT-5"],
+        }
+    ]))
+    import_catalog(conn, catalog)
+    conn.close()
+
+    payload = _run_pending_cli(monkeypatch, capsys, db_path)
+
+    assert payload["context_card"].startswith("Model catalog context (catalog_version: v1)")
+    assert payload["context_card"].count("catalog_version:") == 1
+    assert payload["stories"] == [
+        {"story_id": "11", "input": {"title": "GPT-5 rumor", "text": "body"}}
+    ]
+
+
+def test_pending_cli_context_card_is_null_without_catalog(tmp_path, monkeypatch, capsys):
+    db_path = tmp_path / "cli-empty.db"
+    conn = connect(db_path)
+    migrate(conn)
+    _insert_story(conn, "12", "title", "body")
+    conn.close()
+
+    payload = _run_pending_cli(monkeypatch, capsys, db_path)
+
+    assert payload["context_card"] is None
+    assert [row["story_id"] for row in payload["stories"]] == ["12"]
