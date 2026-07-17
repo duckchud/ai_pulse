@@ -2,7 +2,7 @@ from config import BROAD_KEYWORDS, COLLECTION_QUERY_VERSION, OVERLAP_SECONDS, TR
 
 
 def test_collection_configuration_has_overlap_and_chinese_model_keywords():
-    assert COLLECTION_QUERY_VERSION == "v1"
+    assert COLLECTION_QUERY_VERSION == "v2"
     assert OVERLAP_SECONDS == 7_200
     assert "DeepSeek" in TRACKED_KEYWORDS
     assert "LLM" in BROAD_KEYWORDS

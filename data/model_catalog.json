@@ -6,7 +6,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://claude.com/product/overview",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "Claude",
       "Claude Code",
@@ -33,7 +33,7 @@
     "version": "Opus 4.8",
     "released_on": "2026-05-28",
     "release_source_url": "https://www.anthropic.com/news/claude-opus-4-8",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "Claude Opus 4.8",
       "Opus 4.8",
@@ -47,7 +47,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "GPT",
       "Codex",
@@ -73,7 +73,7 @@
     "version": "5.6 Sol",
     "released_on": "2026-07-09",
     "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "GPT-5.6 Sol",
       "GPT 5.6 Sol",
@@ -87,7 +87,7 @@
     "version": "5.6 Terra",
     "released_on": "2026-07-09",
     "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "GPT-5.6 Terra",
       "GPT 5.6 Terra"
@@ -100,7 +100,7 @@
     "version": "5.6 Luna",
     "released_on": "2026-07-09",
     "release_source_url": "https://openai.com/index/previewing-gpt-5-6-sol/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "GPT-5.6 Luna",
       "GPT 5.6 Luna"
@@ -113,7 +113,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://deepmind.google/models/gemini/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "Gemini",
       "Google Gemini",
@@ -136,7 +136,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://www.deepseek.com/en/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "DeepSeek",
       "DeepSeek Chat",
@@ -150,7 +150,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://www.alibabacloud.com/en/solutions/generative-ai/qwen",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "Qwen",
       "Qwen 3.5",
@@ -166,7 +166,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://www.moonshot.ai/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "Kimi",
       "Kimi K2.5",
@@ -182,7 +182,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://www.minimax.io/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "MiniMax",
       "MiniMax-M2.1"
@@ -195,7 +195,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://www.zhipuai.cn/en",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "GLM",
       "GLM-5.2",
@@ -209,7 +209,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://cursor.com/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "Cursor"
     ]
@@ -221,7 +221,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://x.ai/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "Grok",
       "SuperGrok"
@@ -234,7 +234,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://github.com/features/copilot",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "GitHub Copilot"
     ]
@@ -246,7 +246,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://copilot.microsoft.com/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "Microsoft 365 Copilot"
     ]
@@ -258,7 +258,7 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://deepmind.google/models/gemma/",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "Gemma-4-26B-A4B",
       "gemma 4"
@@ -271,9 +271,130 @@
     "version": null,
     "released_on": null,
     "release_source_url": "https://github.com/XiaomiMiMo/MiMo",
-    "catalog_version": "2026-07-17b",
+    "catalog_version": "2026-07-17c",
     "aliases": [
       "Mimo-2.5-pro"
+    ]
+  },
+  {
+    "model_id": "baidu-ernie",
+    "vendor": "Baidu",
+    "family": "ERNIE",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://yiyan.baidu.com/",
+    "catalog_version": "2026-07-17c",
+    "aliases": [
+      "ERNIE Bot",
+      "Baidu ERNIE",
+      "ERNIE"
+    ]
+  },
+  {
+    "model_id": "bytedance-doubao",
+    "vendor": "ByteDance",
+    "family": "Doubao",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://www.doubao.com/",
+    "catalog_version": "2026-07-17c",
+    "aliases": [
+      "Doubao"
+    ]
+  },
+  {
+    "model_id": "tencent-hunyuan",
+    "vendor": "Tencent",
+    "family": "Hunyuan",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://hunyuan.tencent.com/",
+    "catalog_version": "2026-07-17c",
+    "aliases": [
+      "Hunyuan",
+      "Tencent Hunyuan"
+    ]
+  },
+  {
+    "model_id": "baichuan-ai",
+    "vendor": "Baichuan AI",
+    "family": "Baichuan",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://www.baichuan-ai.com/",
+    "catalog_version": "2026-07-17c",
+    "aliases": [
+      "Baichuan"
+    ]
+  },
+  {
+    "model_id": "01-ai-yi",
+    "vendor": "01.AI",
+    "family": "Yi",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://www.01.ai/",
+    "catalog_version": "2026-07-17c",
+    "aliases": [
+      "Yi-Large",
+      "01.AI",
+      "Yi"
+    ]
+  },
+  {
+    "model_id": "meta-llama",
+    "vendor": "Meta",
+    "family": "Llama",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://www.llama.com/",
+    "catalog_version": "2026-07-17c",
+    "aliases": [
+      "Llama",
+      "Meta Llama",
+      "Llama 3",
+      "Llama 4"
+    ]
+  },
+  {
+    "model_id": "mistral-ai",
+    "vendor": "Mistral AI",
+    "family": "Mistral",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://mistral.ai/",
+    "catalog_version": "2026-07-17c",
+    "aliases": [
+      "Mistral",
+      "Mixtral",
+      "Le Chat",
+      "Mistral AI"
+    ]
+  },
+  {
+    "model_id": "perplexity-ai",
+    "vendor": "Perplexity",
+    "family": "Perplexity",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://www.perplexity.ai/",
+    "catalog_version": "2026-07-17c",
+    "aliases": [
+      "Perplexity",
+      "Perplexity AI"
+    ]
+  },
+  {
+    "model_id": "cohere",
+    "vendor": "Cohere",
+    "family": "Command",
+    "version": null,
+    "released_on": null,
+    "release_source_url": "https://cohere.com/",
+    "catalog_version": "2026-07-17c",
+    "aliases": [
+      "Cohere",
+      "Command R"
     ]
   }
 ]

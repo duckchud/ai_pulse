@@ -13,7 +13,7 @@ def test_merge_hits_unions_keywords_and_query_version():
     hit = {"objectID": "10", "title": "DeepSeek", "created_at_i": 100}
     rows = merge_hits({"LLM": [hit], "DeepSeek": [hit]})
     assert rows[0]["matched_keywords"] == "DeepSeek,LLM"
-    assert rows[0]["collection_query_version"] == "v1"
+    assert rows[0]["collection_query_version"] == "v2"
 
 
 # ── collect() 안전성 테스트 (오프라인, 네트워크/키 불필요) ──────────
