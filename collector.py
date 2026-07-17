@@ -24,7 +24,9 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from config import (
+    ALGOLIA_MAX_RESULTS,
     ALGOLIA_URL,
+    BACKFILL_SLICE_DAYS,
     COLLECTION_QUERY_VERSION,
     DB_PATH,
     HITS_PER_PAGE,
@@ -71,22 +73,43 @@ def backfill_slices(
 
 
 # ── 수집 ─────────────────────────────────────────────────────────
-def search_keyword(session: requests.Session, keyword: str, since_ts: int) -> list[dict]:
-    """한 키워드에 대해 since_ts 이후의 story를 페이지네이션하며 모두 가져온다."""
+# nbPages가 이 값에 닿으면 Algolia가 결과를 잘라낸 것으로 간주한다.
+ALGOLIA_MAX_PAGES = ALGOLIA_MAX_RESULTS // HITS_PER_PAGE
+
+
+def search_keyword(
+    session: requests.Session, keyword: str, start_ts: int, end_ts: int
+) -> list[dict]:
+    """반열린 구간 [start_ts, end_ts)의 story를 모두 가져온다.
+
+    Algolia는 쿼리당 페이지네이션 결과를 ALGOLIA_MAX_RESULTS건으로 제한하므로,
+    한 구간이 한계에 닿으면 구간을 반으로 재귀 분할해 완전 수집을 보장한다.
+    1초 구간에서도 한계에 닿으면 RuntimeError — 조용한 유실 대신 실패를 택한다.
+    """
     hits, page, n_pages = [], 0, 1
     while page < n_pages:
         params = {
             "query": keyword,
             "tags": "story",
-            "numericFilters": f"created_at_i>{since_ts}",
+            "numericFilters": f"created_at_i>={start_ts},created_at_i<{end_ts}",
             "hitsPerPage": HITS_PER_PAGE,
             "page": page,
         }
         resp = session.get(ALGOLIA_URL, params=params, timeout=20)
         resp.raise_for_status()
         data = resp.json()
-        hits.extend(data.get("hits", []))
         n_pages = data.get("nbPages", 1)
+        if n_pages >= ALGOLIA_MAX_PAGES:
+            if end_ts - start_ts <= 1:
+                raise RuntimeError(
+                    f"'{keyword}' 검색이 1초 구간 [{start_ts}, {end_ts})에서도 "
+                    "Algolia 결과 한계에 도달해 완전 수집이 불가능하다"
+                )
+            mid = (start_ts + end_ts) // 2
+            return search_keyword(session, keyword, start_ts, mid) + search_keyword(
+                session, keyword, mid, end_ts
+            )
+        hits.extend(data.get("hits", []))
         page += 1
         time.sleep(REQUEST_PAUSE_SECONDS)
     return hits
@@ -132,6 +155,7 @@ def collect(
     conn: sqlite3.Connection,
     session: requests.Session,
     since_ts: int,
+    until_ts: int,
     update_watermark: bool = True,
 ) -> tuple[int, int]:
     """키워드별로 수집 → merge_hits로 병합 → upsert.
@@ -141,7 +165,7 @@ def collect(
     """
     hits_by_keyword: dict[str, list[dict]] = {}
     for keyword in KEYWORDS:
-        hits_by_keyword[keyword] = search_keyword(session, keyword, since_ts)
+        hits_by_keyword[keyword] = search_keyword(session, keyword, since_ts, until_ts)
         print(f"  · '{keyword}' 검색 완료 ({len(hits_by_keyword[keyword])}건)")
 
     rows = merge_hits(hits_by_keyword)
@@ -171,22 +195,21 @@ def main() -> None:
     migrate(conn)
     session = make_session()
 
+    now = datetime.now(timezone.utc)
+    until_ts = int(now.timestamp()) + 1
+
     if args.backfill is not None:
-        since_ts = int(
-            (datetime.now(timezone.utc) - timedelta(days=args.backfill)).timestamp()
-        )
+        since_ts = int((now - timedelta(days=args.backfill)).timestamp())
         print(f"[backfill] 최근 {args.backfill}일 재수집 (since {since_ts})")
-        n_rows, max_ts = collect(conn, session, since_ts, update_watermark=False)
+        n_rows, max_ts = collect(conn, session, since_ts, until_ts, update_watermark=False)
     else:
         watermark = get_watermark(conn)
         if watermark is None:
-            since_ts = int(
-                (datetime.now(timezone.utc) - timedelta(days=LOOKBACK_DAYS)).timestamp()
-            )
+            since_ts = int((now - timedelta(days=LOOKBACK_DAYS)).timestamp())
         else:
             since_ts = effective_since(int(watermark))
         print(f"[증분] watermark 이후 수집 (since {since_ts})")
-        n_rows, max_ts = collect(conn, session, since_ts, update_watermark=True)
+        n_rows, max_ts = collect(conn, session, since_ts, until_ts, update_watermark=True)
 
     total = conn.execute("SELECT COUNT(*) FROM stories").fetchone()[0]
     print(f"\n완료: 이번 실행 {n_rows}건 처리 / DB 총 {total}건")
