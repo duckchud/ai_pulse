@@ -87,3 +87,24 @@ def test_collect_http_failure_does_not_advance_watermark(temporary_db):
         collect(temporary_db, session, since_ts=0, update_watermark=True)
 
     assert get_watermark(temporary_db) == "1000"
+
+
+# ── backfill 구간 분할 ───────────────────────────────────────────
+def test_backfill_slices_cover_range_without_gaps_or_overlaps():
+    week = 7 * 86_400
+    slices = collector.backfill_slices(0, 180 * 86_400, week)
+    assert slices[0][0] == 0
+    assert slices[-1][1] == 180 * 86_400
+    assert all(end - start <= week for start, end in slices)
+    assert all(a_end == b_start for (_, a_end), (b_start, _) in zip(slices, slices[1:]))
+    assert len(slices) == 26  # ceil(180 / 7)
+
+
+def test_backfill_slices_last_slice_is_shorter_when_range_is_not_a_multiple():
+    slices = collector.backfill_slices(0, 10, 7)
+    assert slices == [(0, 7), (7, 10)]
+
+
+def test_backfill_slices_empty_for_empty_range():
+    assert collector.backfill_slices(100, 100, 7) == []
+    assert collector.backfill_slices(200, 100, 7) == []

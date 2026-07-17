@@ -56,6 +56,20 @@ def effective_since(watermark: int) -> int:
     return max(0, watermark - OVERLAP_SECONDS)
 
 
+# ── backfill 구간 분할 ───────────────────────────────────────────
+def backfill_slices(
+    since_ts: int, until_ts: int, slice_seconds: int
+) -> list[tuple[int, int]]:
+    """[since_ts, until_ts)를 최대 slice_seconds 길이의 연속 반열린 구간으로 나눈다."""
+    slices = []
+    start = since_ts
+    while start < until_ts:
+        end = min(start + slice_seconds, until_ts)
+        slices.append((start, end))
+        start = end
+    return slices
+
+
 # ── 수집 ─────────────────────────────────────────────────────────
 def search_keyword(session: requests.Session, keyword: str, since_ts: int) -> list[dict]:
     """한 키워드에 대해 since_ts 이후의 story를 페이지네이션하며 모두 가져온다."""
