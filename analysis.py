@@ -456,6 +456,23 @@ def model_cooccurrence(
     return result[_COOCCURRENCE_COLUMNS]
 
 
+def _apply_candidate_metadata(result: pd.DataFrame, mentions: pd.DataFrame, as_of) -> None:
+    """candidate_* Gold 함수 3곳이 공유하는 재현성 컬럼을 result에 in-place로 채운다.
+
+    candidate 경로는 Silver extraction을 읽지 않으므로 ``_metadata()``(prompt_version
+    등)가 아니라 candidate 전용 컬럼(as_of/collection_query_version/catalog_version/
+    candidate_reason)만 필요하다.
+    """
+    result["as_of"] = as_of
+    result["collection_query_version"] = _single_or_joined(
+        mentions["collection_query_version"].dropna().unique().tolist()
+    )
+    result["catalog_version"] = _single_or_joined(
+        mentions["catalog_version"].dropna().unique().tolist()
+    )
+    result["candidate_reason"] = "catalog_alias_match"
+
+
 def candidate_emerging_models(
     conn: sqlite3.Connection,
     as_of,
@@ -517,14 +534,7 @@ def candidate_emerging_models(
     result = result.sort_values(
         ["mention_delta", "recent_story_count"], ascending=[False, False]
     ).head(top_n).reset_index(drop=True)
-    result["as_of"] = as_of
-    result["collection_query_version"] = _single_or_joined(
-        mentions["collection_query_version"].dropna().unique().tolist()
-    )
-    result["catalog_version"] = _single_or_joined(
-        mentions["catalog_version"].dropna().unique().tolist()
-    )
-    result["candidate_reason"] = "catalog_alias_match"
+    _apply_candidate_metadata(result, mentions, as_of)
     return result[_CANDIDATE_EMERGING_COLUMNS]
 
 
@@ -571,14 +581,7 @@ def candidate_model_cooccurrence(
         return pd.DataFrame(columns=_CANDIDATE_COOCCURRENCE_COLUMNS)
 
     result = pd.DataFrame(rows)
-    result["as_of"] = as_of
-    result["collection_query_version"] = _single_or_joined(
-        mentions["collection_query_version"].dropna().unique().tolist()
-    )
-    result["catalog_version"] = _single_or_joined(
-        mentions["catalog_version"].dropna().unique().tolist()
-    )
-    result["candidate_reason"] = "catalog_alias_match"
+    _apply_candidate_metadata(result, mentions, as_of)
     return result[_CANDIDATE_COOCCURRENCE_COLUMNS]
 
 
@@ -619,15 +622,8 @@ def candidate_model_lineup(
     result = result.sort_values(
         ["family", "weighted_count"], ascending=[True, False]
     ).reset_index(drop=True)
-    result["as_of"] = as_of
     result["half_life_days"] = half_life_days
-    result["collection_query_version"] = _single_or_joined(
-        mentions["collection_query_version"].dropna().unique().tolist()
-    )
-    result["catalog_version"] = _single_or_joined(
-        mentions["catalog_version"].dropna().unique().tolist()
-    )
-    result["candidate_reason"] = "catalog_alias_match"
+    _apply_candidate_metadata(result, mentions, as_of)
     return result[_CANDIDATE_LINEUP_COLUMNS]
 
 

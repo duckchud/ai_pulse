@@ -6,6 +6,7 @@ from analysis import (
     _load_candidate_mentions,
     candidate_emerging_models,
     candidate_model_cooccurrence,
+    candidate_model_lineup,
     emerging_models,
     model_cooccurrence,
     model_framing_sentiment,
@@ -183,6 +184,31 @@ def test_candidate_cooccurrence_counts_each_pair_once_per_story(temporary_db, tm
 def test_candidate_gold_returns_empty_frames_without_candidates(temporary_db):
     assert candidate_emerging_models(temporary_db, "2026-07-14T12:00:00Z", "family").empty
     assert candidate_model_cooccurrence(temporary_db, "2026-07-14T12:00:00Z", "family").empty
+    assert candidate_model_lineup(temporary_db, "2026-07-14T12:00:00Z").empty
+
+
+def test_candidate_model_lineup_weights_recent_mentions_higher(temporary_db, tmp_path):
+    _import_catalog(temporary_db, tmp_path, [{
+        "model_id": "openai:gpt:5", "vendor": "OpenAI", "family": "GPT", "version": "5",
+        "released_on": None, "release_source_url": "https://example.test/gpt",
+        "catalog_version": "v1", "aliases": ["GPT-5"],
+    }])
+    as_of = "2026-07-14T12:00:00Z"
+    _insert_story(temporary_db, "story-old", created_at_i=1784023200 - 30 * 86400)
+    _insert_story(temporary_db, "story-new", created_at_i=1784023200)
+    _candidate(temporary_db, "story-old", ["openai:gpt:5"])
+    _candidate(temporary_db, "story-new", ["openai:gpt:5"])
+
+    frame = candidate_model_lineup(temporary_db, as_of, half_life_days=30.0)
+    assert len(frame) == 1
+    row = frame.iloc[0]
+    assert row["model_id"] == "openai:gpt:5"
+    assert row["story_count"] == 2
+    # story-old is exactly one half-life back, so it contributes ~0.5 while
+    # story-new (age ~0) contributes ~1.0 -> weighted_count ~= 1.5, well
+    # under the raw story_count of 2.
+    assert row["weighted_count"] == pytest.approx(1.5, abs=0.01)
+    assert row["candidate_reason"] == "catalog_alias_match"
 
 
 @pytest.mark.parametrize("function", [candidate_emerging_models, candidate_model_cooccurrence])
