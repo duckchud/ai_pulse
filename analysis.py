@@ -45,6 +45,12 @@ _CANDIDATE_COOCCURRENCE_COLUMNS = [
     "as_of", "collection_query_version", "catalog_version", "candidate_reason",
 ]
 
+_CANDIDATE_LINEUP_COLUMNS = [
+    "vendor", "family", "version", "model_id",
+    "story_count", "weighted_count", "points_sum", "comments_sum",
+    "as_of", "half_life_days", "collection_query_version", "catalog_version", "candidate_reason",
+]
+
 _FRAMING_COLUMNS = [
     "vendor", "family", "version", "resolution_status", "group_label",
     "stance", "story_count",
@@ -574,6 +580,55 @@ def candidate_model_cooccurrence(
     )
     result["candidate_reason"] = "catalog_alias_match"
     return result[_CANDIDATE_COOCCURRENCE_COLUMNS]
+
+
+def candidate_model_lineup(
+    conn: sqlite3.Connection, as_of, half_life_days: float = 30.0
+) -> pd.DataFrame:
+    """벤더별 개별 model_id(버전 단위) 언급을 story 기준으로 집계한다.
+
+    raw ``story_count``는 전체 수집 기간 누적이라 몇 달 전의 반짝 스파이크가
+    최근 관심도와 동일한 무게로 섞인다. ``weighted_count``는 story마다
+    ``0.5 ** (age_days / half_life_days)``로 감쇠시켜 합산한 값으로, as_of
+    기준 최근 story일수록 더 크게 반영되고 half_life_days가 지날 때마다
+    가중치가 절반이 된다. 두 값을 함께 반환하므로 호출부가 필요에 따라
+    고른다.
+    """
+    if half_life_days <= 0:
+        raise ValueError("half_life_days must be positive")
+    as_of_ts = _parse_as_of(as_of)
+
+    mentions = _load_candidate_mentions(conn)
+    if mentions.empty:
+        return pd.DataFrame(columns=_CANDIDATE_LINEUP_COLUMNS)
+
+    dedup = mentions.drop_duplicates(subset=["story_id", "model_id"]).copy()
+    age_days = (as_of_ts - dedup["created_at_i"]) / 86400.0
+    dedup["weight"] = 0.5 ** (age_days.clip(lower=0) / half_life_days)
+
+    agg = dedup.groupby("model_id").agg(
+        story_count=("story_id", "nunique"),
+        weighted_count=("weight", "sum"),
+        points_sum=("points", "sum"),
+        comments_sum=("num_comments", "sum"),
+    )
+    group_info = dedup.drop_duplicates(subset="model_id").set_index("model_id")[
+        ["vendor", "family", "version"]
+    ]
+    result = agg.join(group_info).reset_index()
+    result = result.sort_values(
+        ["family", "weighted_count"], ascending=[True, False]
+    ).reset_index(drop=True)
+    result["as_of"] = as_of
+    result["half_life_days"] = half_life_days
+    result["collection_query_version"] = _single_or_joined(
+        mentions["collection_query_version"].dropna().unique().tolist()
+    )
+    result["catalog_version"] = _single_or_joined(
+        mentions["catalog_version"].dropna().unique().tolist()
+    )
+    result["candidate_reason"] = "catalog_alias_match"
+    return result[_CANDIDATE_LINEUP_COLUMNS]
 
 
 def model_framing_sentiment(
