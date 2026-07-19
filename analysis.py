@@ -51,6 +51,12 @@ _CANDIDATE_LINEUP_COLUMNS = [
     "as_of", "half_life_days", "collection_query_version", "catalog_version", "candidate_reason",
 ]
 
+_CANDIDATE_TIMESERIES_COLUMNS = [
+    "vendor", "family", "version", "resolution_status", "group_label",
+    "bucket_start", "story_count",
+    "as_of", "bucket_days", "collection_query_version", "catalog_version", "candidate_reason",
+]
+
 _FRAMING_COLUMNS = [
     "vendor", "family", "version", "resolution_status", "group_label",
     "stance", "story_count",
@@ -625,6 +631,59 @@ def candidate_model_lineup(
     result["half_life_days"] = half_life_days
     _apply_candidate_metadata(result, mentions, as_of)
     return result[_CANDIDATE_LINEUP_COLUMNS]
+
+
+def candidate_mention_timeseries(
+    conn: sqlite3.Connection,
+    as_of,
+    group_level: str,
+    bucket_days: int = 7,
+    lookback_days: int = 180,
+) -> pd.DataFrame:
+    """catalog 후보 언급을 캘린더 버킷(기본 7일) 단위로 묶어 시간에 따른 추이를 반환한다.
+
+    family/version 트렌드가 as_of 기준 최근/직전 두 지점만 비교하고, lineup이
+    전체 기간을 감쇠 가중 합으로 뭉개는 것과 달리, 이 함수는 실제 시계열(주차별
+    언급 건수)을 그대로 남긴다. 버킷은 as_of에서 거꾸로 정렬되므로 가장 최근
+    버킷은 항상 [as_of - bucket_days, as_of)로 끝난다. lookback_days 이전
+    story는 제외한다(기본 180일 = 약 6개월).
+    """
+    _validate_group_level(group_level)
+    if bucket_days <= 0:
+        raise ValueError("bucket_days must be positive")
+    as_of_ts = _parse_as_of(as_of)
+    bucket_seconds = bucket_days * 86400
+    lookback_start = as_of_ts - lookback_days * 86400
+
+    mentions = _load_candidate_mentions(conn)
+    if mentions.empty:
+        return pd.DataFrame(columns=_CANDIDATE_TIMESERIES_COLUMNS)
+
+    grouped = _add_group_columns(mentions, group_level)
+    dedup = grouped.drop_duplicates(subset=["story_id", "group_key"])
+    windowed = dedup[
+        (dedup["created_at_i"] >= lookback_start) & (dedup["created_at_i"] < as_of_ts)
+    ].copy()
+    if windowed.empty:
+        return pd.DataFrame(columns=_CANDIDATE_TIMESERIES_COLUMNS)
+
+    bucket_index = (as_of_ts - windowed["created_at_i"]) // bucket_seconds
+    windowed["bucket_start"] = as_of_ts - (bucket_index + 1) * bucket_seconds
+
+    agg = (
+        windowed.groupby(["group_key", "bucket_start"])["story_id"]
+        .nunique()
+        .rename("story_count")
+        .reset_index()
+    )
+    group_info = grouped.drop_duplicates(subset="group_key").set_index("group_key")[
+        ["vendor", "family", "version", "resolution_status", "group_label"]
+    ]
+    result = agg.join(group_info, on="group_key").drop(columns="group_key")
+    result = result.sort_values(["group_label", "bucket_start"]).reset_index(drop=True)
+    result["bucket_days"] = bucket_days
+    _apply_candidate_metadata(result, mentions, as_of)
+    return result[_CANDIDATE_TIMESERIES_COLUMNS]
 
 
 def model_framing_sentiment(

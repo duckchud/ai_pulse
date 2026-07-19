@@ -6,6 +6,7 @@ from analysis import (
     _load_candidate_mentions,
     candidate_emerging_models,
     candidate_model_cooccurrence,
+    candidate_mention_timeseries,
     candidate_model_lineup,
     emerging_models,
     model_cooccurrence,
@@ -185,6 +186,7 @@ def test_candidate_gold_returns_empty_frames_without_candidates(temporary_db):
     assert candidate_emerging_models(temporary_db, "2026-07-14T12:00:00Z", "family").empty
     assert candidate_model_cooccurrence(temporary_db, "2026-07-14T12:00:00Z", "family").empty
     assert candidate_model_lineup(temporary_db, "2026-07-14T12:00:00Z").empty
+    assert candidate_mention_timeseries(temporary_db, "2026-07-14T12:00:00Z", "family").empty
 
 
 def test_candidate_model_lineup_weights_recent_mentions_higher(temporary_db, tmp_path):
@@ -209,6 +211,28 @@ def test_candidate_model_lineup_weights_recent_mentions_higher(temporary_db, tmp
     # under the raw story_count of 2.
     assert row["weighted_count"] == pytest.approx(1.5, abs=0.01)
     assert row["candidate_reason"] == "catalog_alias_match"
+
+
+def test_candidate_mention_timeseries_buckets_by_week_and_counts_story_once(temporary_db, tmp_path):
+    _import_catalog(temporary_db, tmp_path, [{
+        "model_id": "openai:gpt:5", "vendor": "OpenAI", "family": "GPT", "version": "5",
+        "released_on": None, "release_source_url": "https://example.test/gpt",
+        "catalog_version": "v1", "aliases": ["GPT-5"],
+    }])
+    as_of = "2026-07-14T12:00:00Z"
+    as_of_ts = 1784023200 + 12 * 3600
+    _insert_story(temporary_db, "story-this-week", created_at_i=as_of_ts - 2 * 86400)
+    _insert_story(temporary_db, "story-last-week", created_at_i=as_of_ts - 9 * 86400)
+    # a second mention in the same bucket as story-this-week must not double count
+    _insert_story(temporary_db, "story-this-week-2", created_at_i=as_of_ts - 1 * 86400)
+    for story_id in ("story-this-week", "story-last-week", "story-this-week-2"):
+        _candidate(temporary_db, story_id, ["openai:gpt:5"])
+
+    frame = candidate_mention_timeseries(temporary_db, as_of, "family", bucket_days=7)
+    assert frame["group_label"].tolist() == ["OpenAI/GPT", "OpenAI/GPT"]
+    assert frame.sort_values("bucket_start")["story_count"].tolist() == [1, 2]
+    assert frame["bucket_days"].tolist() == [7, 7]
+    assert frame["candidate_reason"].tolist() == ["catalog_alias_match", "catalog_alias_match"]
 
 
 @pytest.mark.parametrize("function", [candidate_emerging_models, candidate_model_cooccurrence])
