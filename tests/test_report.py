@@ -172,6 +172,34 @@ def test_render_report_escapes_dynamic_text(sample_report):
     assert "<script>alert(1)</script>" not in html
 
 
+def test_render_report_assigns_document_unique_svg_ids(sample_report):
+    sample_report["emerging"] = [
+        {"group_label": "Anthropic/Claude", "mention_delta": 3},
+    ]
+
+    html = render_report(sample_report)
+    ids = re.findall(r'\bid="([^"]+)"', html)
+
+    assert "timeseries_svg_id_0" in ids
+    assert "emerging_svg_id_0" in ids
+    assert len(ids) == len(set(ids))
+
+
+def test_render_report_uses_korean_capable_font_stack(sample_report):
+    html = render_report(sample_report)
+
+    assert (
+        'font-family: "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR", '
+        '"Apple SD Gothic Neo", sans-serif;'
+    ) in html
+
+
+def test_render_report_has_no_trailing_whitespace(sample_report):
+    html = render_report(sample_report)
+
+    assert not re.search(r"[ \t]+\n", html)
+
+
 def test_render_report_selects_highest_cooccurrence_pair(sample_report):
     sample_report["timeseries"] = []
     sample_report["cooccurrence"] = [

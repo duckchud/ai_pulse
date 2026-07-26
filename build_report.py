@@ -27,6 +27,17 @@ from db import connect, latest_successful_extractions
 
 
 _EMPTY_CHART = '<p class="chart-empty">해당 기준에서 관측된 결과 없음</p>'
+_KOREAN_FONT_CSS = (
+    '"Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR", '
+    '"Apple SD Gothic Neo", sans-serif'
+)
+_MATPLOTLIB_SANS_SERIF = [
+    "Malgun Gothic",
+    "Noto Sans KR",
+    "Noto Sans CJK KR",
+    "Apple SD Gothic Neo",
+    "DejaVu Sans",
+]
 _CHART_RENDERERS = {
     "timeseries": lambda rows, limit=None: _render_timeseries_chart(rows, limit=limit),
     "emerging": lambda rows, limit=None: _render_emerging_chart(rows, limit=limit),
@@ -152,28 +163,33 @@ def _empty_chart() -> str:
     return _EMPTY_CHART
 
 
-def _normalize_svg(svg: str) -> str:
+def _normalize_svg(svg: str, chart_key: str) -> str:
     """Remove render-time SVG metadata and normalize generated references."""
     svg = re.sub(r"<dc:date>.*?</dc:date>\n", "", svg)
     ids = re.findall(r'id="([^"]+)"', svg)
     replacements = {
-        old: f"svg_id_{index}" for index, old in enumerate(dict.fromkeys(ids))
+        old: f"{chart_key}_svg_id_{index}"
+        for index, old in enumerate(dict.fromkeys(ids))
     }
     for old, new in replacements.items():
         svg = svg.replace(f'id="{old}"', f'id="{new}"')
         svg = svg.replace(f'url(#{old})', f'url(#{new})')
         svg = svg.replace(f'href="#{old}"', f'href="#{new}"')
-    return svg
+    return re.sub(r"[ \t]+\n", "\n", svg)
 
 
-def _svg_from_figure(fig) -> str:
+def _svg_from_figure(fig, chart_key: str) -> str:
     """Serialize a figure as standalone inline SVG without an XML preamble."""
     buffer = io.BytesIO()
-    with matplotlib.rc_context({"svg.fonttype": "none"}):
+    with matplotlib.rc_context({
+        "svg.fonttype": "none",
+        "font.family": "sans-serif",
+        "font.sans-serif": _MATPLOTLIB_SANS_SERIF,
+    }):
         fig.savefig(buffer, format="svg", bbox_inches="tight", metadata={"Date": None})
     plt.close(fig)
     svg = buffer.getvalue().decode("utf-8")
-    return _normalize_svg(svg[svg.find("<svg") :])
+    return _normalize_svg(svg[svg.find("<svg") :], chart_key)
 
 
 def _figure(height: float = 3.8):
@@ -219,10 +235,10 @@ def _render_timeseries_chart(rows: list[dict], limit: int | None = None) -> str:
     ax.set_ylabel("Stories")
     ax.set_ylim(bottom=0)
     ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1), frameon=False)
-    return _svg_from_figure(fig)
+    return _svg_from_figure(fig, "timeseries")
 
 
-def _render_horizontal_bars(labels, values, xlabel: str) -> str:
+def _render_horizontal_bars(labels, values, xlabel: str, chart_key: str) -> str:
     fig, ax = _figure(max(3.2, 1.4 + len(labels) * 0.42))
     positions = list(range(len(labels)))
     ax.barh(positions, values, color="#386cb0")
@@ -231,7 +247,7 @@ def _render_horizontal_bars(labels, values, xlabel: str) -> str:
     ax.invert_yaxis()
     if min(values, default=0) >= 0:
         ax.set_xlim(left=0)
-    return _svg_from_figure(fig)
+    return _svg_from_figure(fig, chart_key)
 
 
 def _render_emerging_chart(rows: list[dict], limit: int | None = None) -> str:
@@ -245,6 +261,7 @@ def _render_emerging_chart(rows: list[dict], limit: int | None = None) -> str:
         frame["group_label"].astype(str).tolist(),
         frame["mention_delta"].astype(float).tolist(),
         "Story delta",
+        "emerging",
     )
 
 
@@ -267,6 +284,7 @@ def _render_lineup_chart(rows: list[dict], limit: int | None = None) -> str:
         frame["label"].tolist(),
         frame["weighted_count"].astype(float).tolist(),
         "Weighted stories",
+        "lineup",
     )
 
 
@@ -293,7 +311,10 @@ def _render_cooccurrence_chart(rows: list[dict], limit: int | None = None) -> st
         axis=1,
     )
     return _render_horizontal_bars(
-        frame["label"].tolist(), frame["story_count"].astype(float).tolist(), "Shared stories"
+        frame["label"].tolist(),
+        frame["story_count"].astype(float).tolist(),
+        "Shared stories",
+        "cooccurrence",
     )
 
 
@@ -328,7 +349,7 @@ def _render_framing_chart(rows: list[dict], limit: int | None = None) -> str:
     ax.set_xlim(left=0)
     ax.invert_yaxis()
     ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1), frameon=False)
-    return _svg_from_figure(fig)
+    return _svg_from_figure(fig, "framing")
 
 
 def _render_chart(
@@ -531,7 +552,7 @@ def render_report(report: dict) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Pulse 정제 분석 보고서</title>
 <style>
-:root {{ color: #202124; background: #ffffff; font-family: Arial, sans-serif; }}
+:root {{ color: #202124; background: #ffffff; font-family: {_KOREAN_FONT_CSS}; }}
 * {{ box-sizing: border-box; }}
 body {{ margin: 0; background: #f6f7f8; line-height: 1.55; }}
 main {{ max-width: 1120px; margin: 0 auto; padding: 28px 24px 56px; }}
