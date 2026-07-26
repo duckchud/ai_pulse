@@ -54,7 +54,8 @@
 ### 시간 기준
 
 - 기준일 `AS_OF`: `stories.created_at`의 최댓값
-- 시계열·lineup·co-occurrence·framing: `AS_OF` 기준 최근 180일
+- 시계열·co-occurrence·framing: `AS_OF` 기준 최근 180일
+- lineup: 전체 candidate 수집 이력을 사용하되, `AS_OF` 기준 30일 half-life로 최신성 가중
 - 급상승 비교: 최근 24시간과 같은 길이의 직전 24시간
 - 시간대: 저장된 UTC timestamp 기준
 - lineup 최신성 가중치: 기본 half-life 30일
@@ -91,7 +92,7 @@
 
 ### 5.4 최근 모델 라인업
 
-- 기본 시각화: vendor별 weighted count 상위 모델 bar chart
+- 기본 시각화: 전체 candidate 이력에 30일 half-life를 적용한 vendor별 weighted count 상위 모델 bar chart
 - 보조 표: model family/version, lifetime story count, weighted count
 - 해석: 누적량과 최신성 가중량이 다를 수 있음을 설명한다.
 
