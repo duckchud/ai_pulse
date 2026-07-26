@@ -1,0 +1,2195 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Pulse 정제 분석 보고서</title>
+<style>
+:root { color: #202124; background: #ffffff; font-family: Arial, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #f6f7f8; line-height: 1.55; }
+main { max-width: 1120px; margin: 0 auto; padding: 28px 24px 56px; }
+header, section { border-bottom: 1px solid #d8dde3; padding: 28px 0; }
+header { padding-top: 8px; }
+h1, h2, h3 { color: #111827; margin: 0 0 12px; letter-spacing: 0; overflow-wrap: anywhere; }
+h1 { font-size: 2.1rem; } h2 { font-size: 1.35rem; } h3 { font-size: 1rem; }
+p, li { margin: 0 0 12px; overflow-wrap: anywhere; } .subtitle { color: #4b5563; font-size: 1.05rem; }
+.meta, .denominator, figcaption, .muted { color: #59636e; font-size: .9rem; }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 22px 0 0; }
+.kpis div { border-left: 4px solid #2563eb; background: #fff; padding: 14px 16px; }
+.kpis dt { color: #59636e; font-size: .86rem; } .kpis dd { margin: 4px 0 0; color: #111827; font-size: 1.55rem; font-weight: 700; }
+.chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+figure { margin: 16px 0; min-width: 0; } figure svg { display: block; max-width: 100%; height: auto; }
+figcaption { margin-top: 6px; } .chart-empty, .table-empty { padding: 18px; background: #fff; border-left: 3px solid #9ca3af; }
+.table-scroll { overflow-x: auto; } table { width: 100%; border-collapse: collapse; background: #fff; font-size: .92rem; }
+th, td { border: 1px solid #d8dde3; padding: 9px 10px; text-align: left; vertical-align: top; white-space: nowrap; }
+th { background: #edf2f7; color: #1f2937; }
+.limitations { background: #fff7ed; border-left: 4px solid #ea580c; padding: 18px; }
+.limitations ul, .summary-list { margin: 0; padding-left: 20px; }
+details { background: #fff; border: 1px solid #d8dde3; padding: 14px; } summary { cursor: pointer; font-weight: 700; }
+code { background: #edf2f7; padding: 1px 4px; }
+@media (max-width: 760px) { main { padding: 20px 14px 40px; } h1 { font-size: 1.75rem; } .kpis, .chart-grid { grid-template-columns: 1fr; } section { padding: 22px 0; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>AI Pulse</h1>
+    <p class="subtitle">Hacker News의 AI 모델 담론을 후보 매칭과 검증 추출로 분리해 읽는 정제 분석 보고서</p>
+    <p class="meta">기준 시각(UTC): 2026-07-17T11:15:09Z | 분석 기간: 최근 180일 | 범위: 수집된 Hacker News story의 모델 담론</p>
+    <dl class="kpis">
+      <div><dt>수집 story</dt><dd>33,505</dd></div>
+      <div><dt>모델 catalog</dt><dd>63</dd></div>
+      <div><dt>성공 extraction</dt><dd>11,037</dd></div>
+    </dl>
+  </header>
+  <section aria-labelledby="summary-heading">
+    <h2 id="summary-heading">핵심 요약</h2>
+    <ul class="summary-list"><li>가장 최근 주간 bucket(2026-07-10)에서 Anthropic/Claude family가 224건으로 가장 많이 관측되었습니다.</li><li>24시간 비교에서 Anthropic/Claude의 언급 증감은 22건입니다. 이는 단기 변화이며 지속 추세를 뜻하지 않습니다.</li><li>최신성 가중 라인업에서는 Anthropic/Claude의 가중 story 합계가 1562.36입니다.</li><li>함께 언급된 상위 조합은 Claude와 GPT이며, 같은 story에 1,642번 나타났습니다.</li></ul>
+  </section>
+  <section aria-labelledby="trend-heading">
+    <h2 id="trend-heading">모델 담론 추이: 지속 변화와 단기 증가를 분리해 확인</h2>
+    <p>주간 추이는 지속적인 언급 흐름을, 24시간 증감은 일시적 spike를 보여줍니다. 참여도는 이 보고서의 순위 근거가 아닙니다.</p>
+    <div class="chart-grid"><figure><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="692.402312pt" height="281.99952pt" viewBox="0 0 692.402312 281.99952" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.0, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="svg_id_0">
+  <g id="svg_id_1">
+   <path d="M 0 281.99952 
+L 692.402312 281.99952 
+L 692.402312 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="svg_id_2">
+   <g id="svg_id_3">
+    <path d="M 47.288281 226.274246 
+L 549.749574 226.274246 
+L 549.749574 7.2 
+L 47.288281 7.2 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="svg_id_4">
+    <g id="svg_id_5">
+     <g id="svg_id_6">
+      <defs>
+       <path id="svg_id_7" d="M 0 0 
+L 0 3.5 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#svg_id_7" x="70.127431" y="226.274246" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(21.14397 272.831635) rotate(-35)">2026-01-16</text>
+     </g>
+    </g>
+    <g id="svg_id_9">
+     <g id="svg_id_10">
+      <g>
+       <use xlink:href="#svg_id_7" x="143.21271" y="226.274246" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(94.229249 272.831635) rotate(-35)">2026-02-13</text>
+     </g>
+    </g>
+    <g id="svg_id_12">
+     <g id="svg_id_13">
+      <g>
+       <use xlink:href="#svg_id_7" x="198.026669" y="226.274246" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(149.043208 272.831635) rotate(-35)">2026-03-06</text>
+     </g>
+    </g>
+    <g id="svg_id_15">
+     <g id="svg_id_16">
+      <g>
+       <use xlink:href="#svg_id_7" x="271.111948" y="226.274246" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(222.128487 272.831635) rotate(-35)">2026-04-03</text>
+     </g>
+    </g>
+    <g id="svg_id_18">
+     <g id="svg_id_19">
+      <g>
+       <use xlink:href="#svg_id_7" x="325.925907" y="226.274246" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(276.942446 272.831635) rotate(-35)">2026-04-24</text>
+     </g>
+    </g>
+    <g id="svg_id_21">
+     <g id="svg_id_22">
+      <g>
+       <use xlink:href="#svg_id_7" x="399.011186" y="226.274246" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_23">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(350.027725 272.831635) rotate(-35)">2026-05-22</text>
+     </g>
+    </g>
+    <g id="svg_id_24">
+     <g id="svg_id_25">
+      <g>
+       <use xlink:href="#svg_id_7" x="453.825145" y="226.274246" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_26">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(404.841684 272.831635) rotate(-35)">2026-06-12</text>
+     </g>
+    </g>
+    <g id="svg_id_27">
+     <g id="svg_id_28">
+      <g>
+       <use xlink:href="#svg_id_7" x="526.910424" y="226.274246" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_29">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(477.926963 272.831635) rotate(-35)">2026-07-10</text>
+     </g>
+    </g>
+   </g>
+   <g id="svg_id_30">
+    <g id="svg_id_31">
+     <g id="svg_id_32">
+      <defs>
+       <path id="svg_id_33" d="M 0 0 
+L -3.5 0 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#svg_id_33" x="47.288281" y="226.274246" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_34">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="40.288281" y="230.073075" transform="rotate(-0 40.288281 230.073075)">0</text>
+     </g>
+    </g>
+    <g id="svg_id_35">
+     <g id="svg_id_36">
+      <g>
+       <use xlink:href="#svg_id_33" x="47.288281" y="187.49318" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_37">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="40.288281" y="191.292008" transform="rotate(-0 40.288281 191.292008)">100</text>
+     </g>
+    </g>
+    <g id="svg_id_38">
+     <g id="svg_id_39">
+      <g>
+       <use xlink:href="#svg_id_33" x="47.288281" y="148.712113" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_40">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="40.288281" y="152.510941" transform="rotate(-0 40.288281 152.510941)">200</text>
+     </g>
+    </g>
+    <g id="svg_id_41">
+     <g id="svg_id_42">
+      <g>
+       <use xlink:href="#svg_id_33" x="47.288281" y="109.931046" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_43">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="40.288281" y="113.729874" transform="rotate(-0 40.288281 113.729874)">300</text>
+     </g>
+    </g>
+    <g id="svg_id_44">
+     <g id="svg_id_45">
+      <g>
+       <use xlink:href="#svg_id_33" x="47.288281" y="71.149979" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_46">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="40.288281" y="74.948807" transform="rotate(-0 40.288281 74.948807)">400</text>
+     </g>
+    </g>
+    <g id="svg_id_47">
+     <g id="svg_id_48">
+      <g>
+       <use xlink:href="#svg_id_33" x="47.288281" y="32.368912" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_49">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="40.288281" y="36.16774" transform="rotate(-0 40.288281 36.16774)">500</text>
+     </g>
+    </g>
+    <g id="svg_id_50">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="14.798438" y="116.737123" transform="rotate(-90 14.798438 116.737123)">Stories</text>
+    </g>
+   </g>
+   <g id="svg_id_51">
+    <path d="M 70.127431 226.274246 
+L 88.398751 226.274246 
+L 106.67007 226.274246 
+L 124.94139 226.274246 
+L 143.21271 225.886436 
+L 161.48403 226.274246 
+L 179.755349 226.274246 
+L 198.026669 226.274246 
+L 216.297989 226.274246 
+L 234.569308 226.274246 
+L 252.840628 226.274246 
+L 271.111948 226.274246 
+L 289.383268 226.274246 
+L 307.654587 226.274246 
+L 325.925907 226.274246 
+L 344.197227 226.274246 
+L 362.468547 226.274246 
+L 380.739866 226.274246 
+L 399.011186 226.274246 
+L 417.282506 226.274246 
+L 435.553826 226.274246 
+L 453.825145 226.274246 
+L 472.096465 226.274246 
+L 490.367785 226.274246 
+L 508.639104 226.274246 
+L 526.910424 226.274246 
+" clip-path="url(#svg_id_72)" style="fill: none; stroke: #1f77b4; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="svg_id_52" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #1f77b4"/>
+    </defs>
+    <g clip-path="url(#svg_id_72)">
+     <use xlink:href="#svg_id_52" x="70.127431" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="88.398751" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="106.67007" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="124.94139" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="143.21271" y="225.886436" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="161.48403" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="179.755349" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="198.026669" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="216.297989" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="234.569308" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="252.840628" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="271.111948" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="289.383268" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="307.654587" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="325.925907" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="344.197227" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="362.468547" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="380.739866" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="399.011186" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="417.282506" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="435.553826" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="453.825145" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="472.096465" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="490.367785" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="508.639104" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#svg_id_52" x="526.910424" y="226.274246" style="fill: #1f77b4; stroke: #1f77b4"/>
+    </g>
+   </g>
+   <g id="svg_id_53">
+    <path d="M 70.127431 223.559572 
+L 88.398751 222.78395 
+L 106.67007 225.886436 
+L 124.94139 223.559572 
+L 143.21271 222.008329 
+L 161.48403 221.620518 
+L 179.755349 213.864305 
+L 198.026669 215.415548 
+L 216.297989 219.293654 
+L 234.569308 222.39614 
+L 252.840628 220.069276 
+L 271.111948 221.232708 
+L 289.383268 219.293654 
+L 307.654587 219.293654 
+L 325.925907 222.39614 
+L 344.197227 222.78395 
+L 362.468547 225.498625 
+L 380.739866 222.008329 
+L 399.011186 224.335193 
+L 417.282506 223.559572 
+L 435.553826 222.39614 
+L 453.825145 220.069276 
+L 472.096465 223.171761 
+L 490.367785 221.232708 
+L 508.639104 222.39614 
+L 526.910424 223.559572 
+" clip-path="url(#svg_id_72)" style="fill: none; stroke: #ff7f0e; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="svg_id_54" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #ff7f0e"/>
+    </defs>
+    <g clip-path="url(#svg_id_72)">
+     <use xlink:href="#svg_id_54" x="70.127431" y="223.559572" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="88.398751" y="222.78395" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="106.67007" y="225.886436" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="124.94139" y="223.559572" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="143.21271" y="222.008329" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="161.48403" y="221.620518" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="179.755349" y="213.864305" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="198.026669" y="215.415548" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="216.297989" y="219.293654" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="234.569308" y="222.39614" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="252.840628" y="220.069276" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="271.111948" y="221.232708" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="289.383268" y="219.293654" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="307.654587" y="219.293654" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="325.925907" y="222.39614" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="344.197227" y="222.78395" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="362.468547" y="225.498625" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="380.739866" y="222.008329" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="399.011186" y="224.335193" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="417.282506" y="223.559572" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="435.553826" y="222.39614" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="453.825145" y="220.069276" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="472.096465" y="223.171761" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="490.367785" y="221.232708" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="508.639104" y="222.39614" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#svg_id_54" x="526.910424" y="223.559572" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+    </g>
+   </g>
+   <g id="svg_id_55">
+    <path d="M 70.127431 140.955899 
+L 88.398751 109.931046 
+L 106.67007 79.294003 
+L 124.94139 82.008678 
+L 143.21271 63.781576 
+L 161.48403 21.898024 
+L 179.755349 17.632107 
+L 198.026669 35.083587 
+L 216.297989 84.335542 
+L 234.569308 106.828561 
+L 252.840628 72.313411 
+L 271.111948 92.867377 
+L 289.383268 75.415897 
+L 307.654587 99.460158 
+L 325.925907 120.789745 
+L 344.197227 140.955899 
+L 362.468547 129.321579 
+L 380.739866 142.894953 
+L 399.011186 146.773059 
+L 417.282506 150.263356 
+L 435.553826 122.728798 
+L 453.825145 121.953177 
+L 472.096465 140.955899 
+L 490.367785 118.850691 
+L 508.639104 136.302171 
+L 526.910424 139.404657 
+" clip-path="url(#svg_id_72)" style="fill: none; stroke: #2ca02c; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="svg_id_56" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #2ca02c"/>
+    </defs>
+    <g clip-path="url(#svg_id_72)">
+     <use xlink:href="#svg_id_56" x="70.127431" y="140.955899" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="88.398751" y="109.931046" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="106.67007" y="79.294003" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="124.94139" y="82.008678" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="143.21271" y="63.781576" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="161.48403" y="21.898024" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="179.755349" y="17.632107" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="198.026669" y="35.083587" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="216.297989" y="84.335542" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="234.569308" y="106.828561" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="252.840628" y="72.313411" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="271.111948" y="92.867377" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="289.383268" y="75.415897" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="307.654587" y="99.460158" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="325.925907" y="120.789745" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="344.197227" y="140.955899" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="362.468547" y="129.321579" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="380.739866" y="142.894953" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="399.011186" y="146.773059" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="417.282506" y="150.263356" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="435.553826" y="122.728798" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="453.825145" y="121.953177" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="472.096465" y="140.955899" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="490.367785" y="118.850691" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="508.639104" y="136.302171" style="fill: #2ca02c; stroke: #2ca02c"/>
+     <use xlink:href="#svg_id_56" x="526.910424" y="139.404657" style="fill: #2ca02c; stroke: #2ca02c"/>
+    </g>
+   </g>
+   <g id="svg_id_57">
+    <path d="M 70.127431 213.476494 
+L 88.398751 214.252116 
+L 106.67007 208.822766 
+L 124.94139 206.495902 
+L 143.21271 206.495902 
+L 161.48403 199.1275 
+L 179.755349 200.290932 
+L 198.026669 226.274246 
+L 216.297989 226.274246 
+L 234.569308 226.274246 
+L 252.840628 226.274246 
+L 271.111948 226.274246 
+L 289.383268 226.274246 
+L 307.654587 226.274246 
+L 325.925907 226.274246 
+L 344.197227 226.274246 
+L 362.468547 226.274246 
+L 380.739866 226.274246 
+L 399.011186 226.274246 
+L 417.282506 226.274246 
+L 435.553826 226.274246 
+L 453.825145 226.274246 
+L 472.096465 226.274246 
+L 490.367785 226.274246 
+L 508.639104 226.274246 
+L 526.910424 226.274246 
+" clip-path="url(#svg_id_72)" style="fill: none; stroke: #d62728; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="svg_id_58" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #d62728"/>
+    </defs>
+    <g clip-path="url(#svg_id_72)">
+     <use xlink:href="#svg_id_58" x="70.127431" y="213.476494" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="88.398751" y="214.252116" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="106.67007" y="208.822766" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="124.94139" y="206.495902" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="143.21271" y="206.495902" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="161.48403" y="199.1275" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="179.755349" y="200.290932" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="198.026669" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="216.297989" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="234.569308" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="252.840628" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="271.111948" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="289.383268" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="307.654587" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="325.925907" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="344.197227" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="362.468547" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="380.739866" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="399.011186" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="417.282506" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="435.553826" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="453.825145" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="472.096465" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="490.367785" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="508.639104" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+     <use xlink:href="#svg_id_58" x="526.910424" y="226.274246" style="fill: #d62728; stroke: #d62728"/>
+    </g>
+   </g>
+   <g id="svg_id_59">
+    <path d="M 47.288281 226.274246 
+L 47.288281 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_60">
+    <path d="M 549.749574 226.274246 
+L 549.749574 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_61">
+    <path d="M 47.288281 226.274246 
+L 549.749574 226.274246 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_62">
+    <path d="M 47.288281 7.2 
+L 549.749574 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_63">
+    <g id="svg_id_64">
+     <path d="M 563.774187 20.298437 
+L 573.774187 20.298437 
+L 583.774187 20.298437 
+" style="fill: none; stroke: #1f77b4; stroke-width: 1.8; stroke-linecap: square"/>
+     <g>
+      <use xlink:href="#svg_id_52" x="573.774187" y="20.298437" style="fill: #1f77b4; stroke: #1f77b4"/>
+     </g>
+    </g>
+    <g id="svg_id_65">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="591.774187" y="23.798437" transform="rotate(-0 591.774187 23.798437)">01.AI/Yi</text>
+    </g>
+    <g id="svg_id_66">
+     <path d="M 563.774187 35.299219 
+L 573.774187 35.299219 
+L 583.774187 35.299219 
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.8; stroke-linecap: square"/>
+     <g>
+      <use xlink:href="#svg_id_54" x="573.774187" y="35.299219" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     </g>
+    </g>
+    <g id="svg_id_67">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="591.774187" y="38.799219" transform="rotate(-0 591.774187 38.799219)">Alibaba/Qwen</text>
+    </g>
+    <g id="svg_id_68">
+     <path d="M 563.774187 50.3 
+L 573.774187 50.3 
+L 583.774187 50.3 
+" style="fill: none; stroke: #2ca02c; stroke-width: 1.8; stroke-linecap: square"/>
+     <g>
+      <use xlink:href="#svg_id_56" x="573.774187" y="50.3" style="fill: #2ca02c; stroke: #2ca02c"/>
+     </g>
+    </g>
+    <g id="svg_id_69">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="591.774187" y="53.8" transform="rotate(-0 591.774187 53.8)">Anthropic/Claude</text>
+    </g>
+    <g id="svg_id_70">
+     <path d="M 563.774187 65.300781 
+L 573.774187 65.300781 
+L 583.774187 65.300781 
+" style="fill: none; stroke: #d62728; stroke-width: 1.8; stroke-linecap: square"/>
+     <g>
+      <use xlink:href="#svg_id_58" x="573.774187" y="65.300781" style="fill: #d62728; stroke: #d62728"/>
+     </g>
+    </g>
+    <g id="svg_id_71">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="591.774187" y="68.800781" transform="rotate(-0 591.774187 68.800781)">Anysphere/Cursor</text>
+    </g>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="svg_id_72">
+   <rect x="47.288281" y="7.2" width="502.461293" height="219.074246"/>
+  </clipPath>
+ </defs>
+</svg>
+<figcaption>최근 180일, 7일 bucket의 family별 고유 story 수.</figcaption></figure><figure><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="692.39952pt" height="290.63952pt" viewBox="0 0 692.39952 290.63952" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.0, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="svg_id_0">
+  <g id="svg_id_1">
+   <path d="M 0 290.63952 
+L 692.39952 290.63952 
+L 692.39952 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="svg_id_2">
+   <g id="svg_id_3">
+    <path d="M 103.628125 252.438739 
+L 685.19952 252.438739 
+L 685.19952 7.2 
+L 103.628125 7.2 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="svg_id_4">
+    <path d="M 153.0502 18.347215 
+L 658.764457 18.347215 
+L 658.764457 49.098154 
+L 153.0502 49.098154 
+z
+" clip-path="url(#svg_id_52)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_5">
+    <path d="M 153.0502 56.785889 
+L 543.829398 56.785889 
+L 543.829398 87.536828 
+L 153.0502 87.536828 
+z
+" clip-path="url(#svg_id_52)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_6">
+    <path d="M 153.0502 95.224563 
+L 244.998247 95.224563 
+L 244.998247 125.975502 
+L 153.0502 125.975502 
+z
+" clip-path="url(#svg_id_52)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_7">
+    <path d="M 153.0502 133.663237 
+L 176.037212 133.663237 
+L 176.037212 164.414176 
+L 153.0502 164.414176 
+z
+" clip-path="url(#svg_id_52)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_8">
+    <path d="M 153.0502 172.101911 
+L 153.0502 172.101911 
+L 153.0502 202.85285 
+L 153.0502 202.85285 
+z
+" clip-path="url(#svg_id_52)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_9">
+    <path d="M 153.0502 210.540584 
+L 130.063188 210.540584 
+L 130.063188 241.291523 
+L 153.0502 241.291523 
+z
+" clip-path="url(#svg_id_52)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_10">
+    <g id="svg_id_11">
+     <g id="svg_id_12">
+      <defs>
+       <path id="svg_id_13" d="M 0 0 
+L 0 3.5 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#svg_id_13" x="153.0502" y="252.438739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="153.0502" y="267.036395" transform="rotate(-0 153.0502 267.036395)">0</text>
+     </g>
+    </g>
+    <g id="svg_id_15">
+     <g id="svg_id_16">
+      <g>
+       <use xlink:href="#svg_id_13" x="267.985258" y="252.438739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="267.985258" y="267.036395" transform="rotate(-0 267.985258 267.036395)">5</text>
+     </g>
+    </g>
+    <g id="svg_id_18">
+     <g id="svg_id_19">
+      <g>
+       <use xlink:href="#svg_id_13" x="382.920317" y="252.438739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="382.920317" y="267.036395" transform="rotate(-0 382.920317 267.036395)">10</text>
+     </g>
+    </g>
+    <g id="svg_id_21">
+     <g id="svg_id_22">
+      <g>
+       <use xlink:href="#svg_id_13" x="497.855375" y="252.438739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_23">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="497.855375" y="267.036395" transform="rotate(-0 497.855375 267.036395)">15</text>
+     </g>
+    </g>
+    <g id="svg_id_24">
+     <g id="svg_id_25">
+      <g>
+       <use xlink:href="#svg_id_13" x="612.790433" y="252.438739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_26">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="612.790433" y="267.036395" transform="rotate(-0 612.790433 267.036395)">20</text>
+     </g>
+    </g>
+    <g id="svg_id_27">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="394.413822" y="281.037176" transform="rotate(-0 394.413822 281.037176)">Story delta</text>
+    </g>
+   </g>
+   <g id="svg_id_28">
+    <g id="svg_id_29">
+     <g id="svg_id_30">
+      <defs>
+       <path id="svg_id_31" d="M 0 0 
+L -3.5 0 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#svg_id_31" x="103.628125" y="33.722685" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_32">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="96.628125" y="37.521904" transform="rotate(-0 96.628125 37.521904)">Anthropic/Claude</text>
+     </g>
+    </g>
+    <g id="svg_id_33">
+     <g id="svg_id_34">
+      <g>
+       <use xlink:href="#svg_id_31" x="103.628125" y="72.161359" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_35">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="96.628125" y="75.960577" transform="rotate(-0 96.628125 75.960577)">Moonshot AI/Kimi</text>
+     </g>
+    </g>
+    <g id="svg_id_36">
+     <g id="svg_id_37">
+      <g>
+       <use xlink:href="#svg_id_31" x="103.628125" y="110.600032" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_38">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="96.628125" y="114.399251" transform="rotate(-0 96.628125 114.399251)">Anysphere/Cursor</text>
+     </g>
+    </g>
+    <g id="svg_id_39">
+     <g id="svg_id_40">
+      <g>
+       <use xlink:href="#svg_id_31" x="103.628125" y="149.038706" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_41">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="96.628125" y="152.837925" transform="rotate(-0 96.628125 152.837925)">xAI/Grok</text>
+     </g>
+    </g>
+    <g id="svg_id_42">
+     <g id="svg_id_43">
+      <g>
+       <use xlink:href="#svg_id_31" x="103.628125" y="187.47738" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_44">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="96.628125" y="191.276599" transform="rotate(-0 96.628125 191.276599)">Google/Gemini</text>
+     </g>
+    </g>
+    <g id="svg_id_45">
+     <g id="svg_id_46">
+      <g>
+       <use xlink:href="#svg_id_31" x="103.628125" y="225.916054" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_47">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="96.628125" y="229.714882" transform="rotate(-0 96.628125 229.714882)">OpenAI/GPT</text>
+     </g>
+    </g>
+   </g>
+   <g id="svg_id_48">
+    <path d="M 103.628125 252.438739 
+L 103.628125 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_49">
+    <path d="M 685.19952 252.438739 
+L 685.19952 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_50">
+    <path d="M 103.628125 252.438739 
+L 685.19952 252.438739 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_51">
+    <path d="M 103.628125 7.2 
+L 685.19952 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="svg_id_52">
+   <rect x="103.628125" y="7.2" width="581.571395" height="245.238739"/>
+  </clipPath>
+ </defs>
+</svg>
+<figcaption>최근 24시간과 직전 24시간의 고유 story 수 차이.</figcaption></figure></div>
+    <p class="denominator">후보 경로 분모: 현재 catalog alias로 매칭된 수집 story입니다. 최근 180일 결과는 이 분모에 한정됩니다.</p>
+  </section>
+  <section aria-labelledby="lineup-heading">
+    <h2 id="lineup-heading">최근 모델 라인업: 누적 언급과 최신성 가중량의 차이</h2>
+    <p>전체 candidate 이력에 시간 감쇠를 적용해 최근에 관측된 모델을 함께 보되, 이는 모델 성능이나 시장 점유율 순위가 아닙니다.</p>
+    <figure><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="692.39952pt" height="411.59952pt" viewBox="0 0 692.39952 411.59952" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.0, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="svg_id_0">
+  <g id="svg_id_1">
+   <path d="M 0 411.59952 
+L 692.39952 411.59952 
+L 692.39952 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="svg_id_2">
+   <g id="svg_id_3">
+    <path d="M 158.032813 373.398739 
+L 685.19952 373.398739 
+L 685.19952 7.2 
+L 158.032813 7.2 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="svg_id_4">
+    <path d="M 158.032813 23.845397 
+L 660.096343 23.845397 
+L 660.096343 51.021556 
+L 158.032813 51.021556 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_5">
+    <path d="M 158.032813 57.815596 
+L 170.304699 57.815596 
+L 170.304699 84.991754 
+L 158.032813 84.991754 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_6">
+    <path d="M 158.032813 91.785794 
+L 167.949656 91.785794 
+L 167.949656 118.961953 
+L 158.032813 118.961953 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_7">
+    <path d="M 158.032813 125.755992 
+L 164.08575 125.755992 
+L 164.08575 152.932151 
+L 158.032813 152.932151 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_8">
+    <path d="M 158.032813 159.726191 
+L 160.501234 159.726191 
+L 160.501234 186.90235 
+L 158.032813 186.90235 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_9">
+    <path d="M 158.032813 193.696389 
+L 159.657068 193.696389 
+L 159.657068 220.872548 
+L 158.032813 220.872548 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_10">
+    <path d="M 158.032813 227.666588 
+L 159.496383 227.666588 
+L 159.496383 254.842746 
+L 158.032813 254.842746 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_11">
+    <path d="M 158.032813 261.636786 
+L 175.591206 261.636786 
+L 175.591206 288.812945 
+L 158.032813 288.812945 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_12">
+    <path d="M 158.032813 295.606984 
+L 163.195282 295.606984 
+L 163.195282 322.783143 
+L 158.032813 322.783143 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_13">
+    <path d="M 158.032813 329.577183 
+L 199.627533 329.577183 
+L 199.627533 356.753342 
+L 158.032813 356.753342 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_14">
+    <g id="svg_id_15">
+     <g id="svg_id_16">
+      <defs>
+       <path id="svg_id_17" d="M 0 0 
+L 0 3.5 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#svg_id_17" x="158.032813" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="158.032813" y="387.996395" transform="rotate(-0 158.032813 387.996395)">0</text>
+     </g>
+    </g>
+    <g id="svg_id_19">
+     <g id="svg_id_20">
+      <g>
+       <use xlink:href="#svg_id_17" x="222.30273" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_21">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="222.30273" y="387.996395" transform="rotate(-0 222.30273 387.996395)">200</text>
+     </g>
+    </g>
+    <g id="svg_id_22">
+     <g id="svg_id_23">
+      <g>
+       <use xlink:href="#svg_id_17" x="286.572648" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_24">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="286.572648" y="387.996395" transform="rotate(-0 286.572648 387.996395)">400</text>
+     </g>
+    </g>
+    <g id="svg_id_25">
+     <g id="svg_id_26">
+      <g>
+       <use xlink:href="#svg_id_17" x="350.842566" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_27">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="350.842566" y="387.996395" transform="rotate(-0 350.842566 387.996395)">600</text>
+     </g>
+    </g>
+    <g id="svg_id_28">
+     <g id="svg_id_29">
+      <g>
+       <use xlink:href="#svg_id_17" x="415.112483" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_30">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="415.112483" y="387.996395" transform="rotate(-0 415.112483 387.996395)">800</text>
+     </g>
+    </g>
+    <g id="svg_id_31">
+     <g id="svg_id_32">
+      <g>
+       <use xlink:href="#svg_id_17" x="479.382401" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_33">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="479.382401" y="387.996395" transform="rotate(-0 479.382401 387.996395)">1000</text>
+     </g>
+    </g>
+    <g id="svg_id_34">
+     <g id="svg_id_35">
+      <g>
+       <use xlink:href="#svg_id_17" x="543.652319" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_36">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="543.652319" y="387.996395" transform="rotate(-0 543.652319 387.996395)">1200</text>
+     </g>
+    </g>
+    <g id="svg_id_37">
+     <g id="svg_id_38">
+      <g>
+       <use xlink:href="#svg_id_17" x="607.922236" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_39">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="607.922236" y="387.996395" transform="rotate(-0 607.922236 387.996395)">1400</text>
+     </g>
+    </g>
+    <g id="svg_id_40">
+     <g id="svg_id_41">
+      <g>
+       <use xlink:href="#svg_id_17" x="672.192154" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_42">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="672.192154" y="387.996395" transform="rotate(-0 672.192154 387.996395)">1600</text>
+     </g>
+    </g>
+    <g id="svg_id_43">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="421.616166" y="401.997176" transform="rotate(-0 421.616166 401.997176)">Weighted stories</text>
+    </g>
+   </g>
+   <g id="svg_id_44">
+    <g id="svg_id_45">
+     <g id="svg_id_46">
+      <defs>
+       <path id="svg_id_47" d="M 0 0 
+L -3.5 0 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#svg_id_47" x="158.032813" y="37.433477" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_48">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="151.032813" y="41.232695" transform="rotate(-0 151.032813 41.232695)">Anthropic/Claude</text>
+     </g>
+    </g>
+    <g id="svg_id_49">
+     <g id="svg_id_50">
+      <g>
+       <use xlink:href="#svg_id_47" x="158.032813" y="71.403675" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_51">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="151.032813" y="75.202894" transform="rotate(-0 151.032813 75.202894)">Anthropic/Claude/Mythos</text>
+     </g>
+    </g>
+    <g id="svg_id_52">
+     <g id="svg_id_53">
+      <g>
+       <use xlink:href="#svg_id_47" x="158.032813" y="105.373873" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_54">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="151.032813" y="109.173092" transform="rotate(-0 151.032813 109.173092)">Anthropic/Claude/Opus 4.8</text>
+     </g>
+    </g>
+    <g id="svg_id_55">
+     <g id="svg_id_56">
+      <g>
+       <use xlink:href="#svg_id_47" x="158.032813" y="139.344072" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_57">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="151.032813" y="143.143291" transform="rotate(-0 151.032813 143.143291)">Anthropic/Claude/Opus 4.7</text>
+     </g>
+    </g>
+    <g id="svg_id_58">
+     <g id="svg_id_59">
+      <g>
+       <use xlink:href="#svg_id_47" x="158.032813" y="173.31427" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_60">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="151.032813" y="177.113489" transform="rotate(-0 151.032813 177.113489)">Anthropic/Claude/Sonnet 4.6</text>
+     </g>
+    </g>
+    <g id="svg_id_61">
+     <g id="svg_id_62">
+      <g>
+       <use xlink:href="#svg_id_47" x="158.032813" y="207.284469" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_63">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="151.032813" y="211.083687" transform="rotate(-0 151.032813 211.083687)">Cohere/Command</text>
+     </g>
+    </g>
+    <g id="svg_id_64">
+     <g id="svg_id_65">
+      <g>
+       <use xlink:href="#svg_id_47" x="158.032813" y="241.254667" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_66">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="151.032813" y="245.053886" transform="rotate(-0 151.032813 245.053886)">Cohere/Command/A+</text>
+     </g>
+    </g>
+    <g id="svg_id_67">
+     <g id="svg_id_68">
+      <g>
+       <use xlink:href="#svg_id_47" x="158.032813" y="275.224865" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_69">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="151.032813" y="279.024084" transform="rotate(-0 151.032813 279.024084)">Microsoft/Copilot</text>
+     </g>
+    </g>
+    <g id="svg_id_70">
+     <g id="svg_id_71">
+      <g>
+       <use xlink:href="#svg_id_47" x="158.032813" y="309.195064" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_72">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="151.032813" y="312.994283" transform="rotate(-0 151.032813 312.994283)">GitHub/Copilot</text>
+     </g>
+    </g>
+    <g id="svg_id_73">
+     <g id="svg_id_74">
+      <g>
+       <use xlink:href="#svg_id_47" x="158.032813" y="343.165262" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_75">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="151.032813" y="346.964481" transform="rotate(-0 151.032813 346.964481)">Anysphere/Cursor</text>
+     </g>
+    </g>
+   </g>
+   <g id="svg_id_76">
+    <path d="M 158.032813 373.398739 
+L 158.032813 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_77">
+    <path d="M 685.19952 373.398739 
+L 685.19952 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_78">
+    <path d="M 158.032813 373.398739 
+L 685.19952 373.398739 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_79">
+    <path d="M 158.032813 7.2 
+L 685.19952 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="svg_id_80">
+   <rect x="158.032813" y="7.2" width="527.166708" height="366.198739"/>
+  </clipPath>
+ </defs>
+</svg>
+<figcaption>전체 candidate 이력에 30.00일 half-life를 적용한 가중 story 합계.</figcaption></figure>
+    <div class="table-scroll"><table><thead><tr><th scope="col">공급사</th><th scope="col">family</th><th scope="col">version</th><th scope="col">누적 story</th><th scope="col">최신성 가중치</th></tr></thead><tbody><tr><td>Anthropic</td><td>Claude</td><td>-</td><td>8,183</td><td>1562.36</td></tr><tr><td>Anthropic</td><td>Claude</td><td>Mythos</td><td>143</td><td>38.19</td></tr><tr><td>Anthropic</td><td>Claude</td><td>Opus 4.8</td><td>62</td><td>30.86</td></tr><tr><td>Anthropic</td><td>Claude</td><td>Opus 4.7</td><td>104</td><td>18.84</td></tr><tr><td>Anthropic</td><td>Claude</td><td>Sonnet 4.6</td><td>63</td><td>7.68</td></tr><tr><td>Cohere</td><td>Command</td><td>-</td><td>31</td><td>5.05</td></tr><tr><td>Cohere</td><td>Command</td><td>A+</td><td>13</td><td>4.55</td></tr><tr><td>Microsoft</td><td>Copilot</td><td>-</td><td>318</td><td>54.64</td></tr><tr><td>GitHub</td><td>Copilot</td><td>-</td><td>82</td><td>16.06</td></tr><tr><td>Anysphere</td><td>Cursor</td><td>-</td><td>821</td><td>129.44</td></tr></tbody></table></div>
+    <p class="denominator">후보 경로 분모: 현재 catalog alias로 매칭된 수집 story 전체 이력입니다.</p>
+  </section>
+  <section aria-labelledby="cooccurrence-heading">
+    <h2 id="cooccurrence-heading">함께 언급되는 모델 조합: 같은 story 안의 논의 맥락</h2>
+    <p>같은 story에서 함께 등장한 family 조합을 집계했습니다. 이 수치는 성능 비교, 의존관계, 또는 인과관계를 의미하지 않습니다.</p>
+    <figure><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="692.39952pt" height="411.59952pt" viewBox="0 0 692.39952 411.59952" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.0, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="svg_id_0">
+  <g id="svg_id_1">
+   <path d="M 0 411.59952 
+L 692.39952 411.59952 
+L 692.39952 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="svg_id_2">
+   <g id="svg_id_3">
+    <path d="M 204.53125 373.398739 
+L 685.19952 373.398739 
+L 685.19952 7.2 
+L 204.53125 7.2 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="svg_id_4">
+    <path d="M 204.53125 23.845397 
+L 662.310555 23.845397 
+L 662.310555 51.021556 
+L 204.53125 51.021556 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_5">
+    <path d="M 204.53125 57.815596 
+L 391.044255 57.815596 
+L 391.044255 84.991754 
+L 204.53125 84.991754 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_6">
+    <path d="M 204.53125 91.785794 
+L 373.48025 91.785794 
+L 373.48025 118.961953 
+L 204.53125 118.961953 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_7">
+    <path d="M 204.53125 125.755992 
+L 344.485702 125.755992 
+L 344.485702 152.932151 
+L 204.53125 152.932151 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_8">
+    <path d="M 204.53125 159.726191 
+L 287.332988 159.726191 
+L 287.332988 186.90235 
+L 204.53125 186.90235 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_9">
+    <path d="M 204.53125 193.696389 
+L 262.241552 193.696389 
+L 262.241552 220.872548 
+L 204.53125 220.872548 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_10">
+    <path d="M 204.53125 227.666588 
+L 235.756148 227.666588 
+L 235.756148 254.842746 
+L 204.53125 254.842746 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_11">
+    <path d="M 204.53125 261.636786 
+L 234.919767 261.636786 
+L 234.919767 288.812945 
+L 204.53125 288.812945 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_12">
+    <path d="M 204.53125 295.606984 
+L 232.689417 295.606984 
+L 232.689417 322.783143 
+L 204.53125 322.783143 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_13">
+    <path d="M 204.53125 329.577183 
+L 228.786305 329.577183 
+L 228.786305 356.753342 
+L 204.53125 356.753342 
+z
+" clip-path="url(#svg_id_80)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_14">
+    <g id="svg_id_15">
+     <g id="svg_id_16">
+      <defs>
+       <path id="svg_id_17" d="M 0 0 
+L 0 3.5 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#svg_id_17" x="204.53125" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="204.53125" y="387.996395" transform="rotate(-0 204.53125 387.996395)">0</text>
+     </g>
+    </g>
+    <g id="svg_id_19">
+     <g id="svg_id_20">
+      <g>
+       <use xlink:href="#svg_id_17" x="260.289996" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_21">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="260.289996" y="387.996395" transform="rotate(-0 260.289996 387.996395)">200</text>
+     </g>
+    </g>
+    <g id="svg_id_22">
+     <g id="svg_id_23">
+      <g>
+       <use xlink:href="#svg_id_17" x="316.048742" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_24">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="316.048742" y="387.996395" transform="rotate(-0 316.048742 387.996395)">400</text>
+     </g>
+    </g>
+    <g id="svg_id_25">
+     <g id="svg_id_26">
+      <g>
+       <use xlink:href="#svg_id_17" x="371.807488" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_27">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="371.807488" y="387.996395" transform="rotate(-0 371.807488 387.996395)">600</text>
+     </g>
+    </g>
+    <g id="svg_id_28">
+     <g id="svg_id_29">
+      <g>
+       <use xlink:href="#svg_id_17" x="427.566234" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_30">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="427.566234" y="387.996395" transform="rotate(-0 427.566234 387.996395)">800</text>
+     </g>
+    </g>
+    <g id="svg_id_31">
+     <g id="svg_id_32">
+      <g>
+       <use xlink:href="#svg_id_17" x="483.32498" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_33">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="483.32498" y="387.996395" transform="rotate(-0 483.32498 387.996395)">1000</text>
+     </g>
+    </g>
+    <g id="svg_id_34">
+     <g id="svg_id_35">
+      <g>
+       <use xlink:href="#svg_id_17" x="539.083726" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_36">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="539.083726" y="387.996395" transform="rotate(-0 539.083726 387.996395)">1200</text>
+     </g>
+    </g>
+    <g id="svg_id_37">
+     <g id="svg_id_38">
+      <g>
+       <use xlink:href="#svg_id_17" x="594.842472" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_39">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="594.842472" y="387.996395" transform="rotate(-0 594.842472 387.996395)">1400</text>
+     </g>
+    </g>
+    <g id="svg_id_40">
+     <g id="svg_id_41">
+      <g>
+       <use xlink:href="#svg_id_17" x="650.601218" y="373.398739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_42">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="650.601218" y="387.996395" transform="rotate(-0 650.601218 387.996395)">1600</text>
+     </g>
+    </g>
+    <g id="svg_id_43">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="444.865385" y="401.997176" transform="rotate(-0 444.865385 401.997176)">Shared stories</text>
+    </g>
+   </g>
+   <g id="svg_id_44">
+    <g id="svg_id_45">
+     <g id="svg_id_46">
+      <defs>
+       <path id="svg_id_47" d="M 0 0 
+L -3.5 0 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#svg_id_47" x="204.53125" y="37.433477" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_48">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="197.53125" y="41.232695" transform="rotate(-0 197.53125 41.232695)">Anthropic/Claude + OpenAI/GPT</text>
+     </g>
+    </g>
+    <g id="svg_id_49">
+     <g id="svg_id_50">
+      <g>
+       <use xlink:href="#svg_id_47" x="204.53125" y="71.403675" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_51">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="197.53125" y="75.202894" transform="rotate(-0 197.53125 75.202894)">Anthropic/Claude + Anysphere/Cursor</text>
+     </g>
+    </g>
+    <g id="svg_id_52">
+     <g id="svg_id_53">
+      <g>
+       <use xlink:href="#svg_id_47" x="204.53125" y="105.373873" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_54">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="197.53125" y="109.173092" transform="rotate(-0 197.53125 109.173092)">Anthropic/Claude + Google/Gemini</text>
+     </g>
+    </g>
+    <g id="svg_id_55">
+     <g id="svg_id_56">
+      <g>
+       <use xlink:href="#svg_id_47" x="204.53125" y="139.344072" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_57">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="197.53125" y="143.143291" transform="rotate(-0 197.53125 143.143291)">Google/Gemini + OpenAI/GPT</text>
+     </g>
+    </g>
+    <g id="svg_id_58">
+     <g id="svg_id_59">
+      <g>
+       <use xlink:href="#svg_id_47" x="204.53125" y="173.31427" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_60">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="197.53125" y="177.113489" transform="rotate(-0 197.53125 177.113489)">Anysphere/Cursor + OpenAI/GPT</text>
+     </g>
+    </g>
+    <g id="svg_id_61">
+     <g id="svg_id_62">
+      <g>
+       <use xlink:href="#svg_id_47" x="204.53125" y="207.284469" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_63">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="197.53125" y="211.083687" transform="rotate(-0 197.53125 211.083687)">Anthropic/Claude + Microsoft/Copilot</text>
+     </g>
+    </g>
+    <g id="svg_id_64">
+     <g id="svg_id_65">
+      <g>
+       <use xlink:href="#svg_id_47" x="204.53125" y="241.254667" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_66">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="197.53125" y="245.053886" transform="rotate(-0 197.53125 245.053886)">Microsoft/Copilot + OpenAI/GPT</text>
+     </g>
+    </g>
+    <g id="svg_id_67">
+     <g id="svg_id_68">
+      <g>
+       <use xlink:href="#svg_id_47" x="204.53125" y="275.224865" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_69">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="197.53125" y="279.024084" transform="rotate(-0 197.53125 279.024084)">Anysphere/Cursor + Microsoft/Copilot</text>
+     </g>
+    </g>
+    <g id="svg_id_70">
+     <g id="svg_id_71">
+      <g>
+       <use xlink:href="#svg_id_47" x="204.53125" y="309.195064" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_72">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="197.53125" y="312.994283" transform="rotate(-0 197.53125 312.994283)">Anysphere/Cursor + Google/Gemini</text>
+     </g>
+    </g>
+    <g id="svg_id_73">
+     <g id="svg_id_74">
+      <g>
+       <use xlink:href="#svg_id_47" x="204.53125" y="343.165262" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_75">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="197.53125" y="346.964481" transform="rotate(-0 197.53125 346.964481)">Anthropic/Claude + xAI/Grok</text>
+     </g>
+    </g>
+   </g>
+   <g id="svg_id_76">
+    <path d="M 204.53125 373.398739 
+L 204.53125 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_77">
+    <path d="M 685.19952 373.398739 
+L 685.19952 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_78">
+    <path d="M 204.53125 373.398739 
+L 685.19952 373.398739 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_79">
+    <path d="M 204.53125 7.2 
+L 685.19952 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="svg_id_80">
+   <rect x="204.53125" y="7.2" width="480.66827" height="366.198739"/>
+  </clipPath>
+ </defs>
+</svg>
+<figcaption>최근 180일 같은 story에 함께 나타난 resolved family pair 수.</figcaption></figure>
+    <div class="table-scroll"><table><thead><tr><th scope="col">family A</th><th scope="col">family B</th><th scope="col">함께 언급된 story</th></tr></thead><tbody><tr><td>Claude</td><td>GPT</td><td>1,642</td></tr><tr><td>Claude</td><td>Cursor</td><td>669</td></tr><tr><td>Claude</td><td>Gemini</td><td>606</td></tr><tr><td>Gemini</td><td>GPT</td><td>502</td></tr><tr><td>Cursor</td><td>GPT</td><td>297</td></tr><tr><td>Claude</td><td>Copilot</td><td>207</td></tr><tr><td>Copilot</td><td>GPT</td><td>112</td></tr><tr><td>Cursor</td><td>Copilot</td><td>109</td></tr><tr><td>Cursor</td><td>Gemini</td><td>101</td></tr><tr><td>Claude</td><td>Grok</td><td>87</td></tr></tbody></table></div>
+    <p class="denominator">후보 경로 분모: 최근 180일의 resolved candidate story이며, story별 pair는 한 번만 계산합니다.</p>
+  </section>
+  <section aria-labelledby="framing-heading">
+    <h2 id="framing-heading">Story framing: 검증된 추출 표본에서의 stance 분포</h2>
+    <p>stance는 story가 모델을 어떻게 framing했는지를 나타내는 open-world label입니다. 빈 label과 unresolved label은 임의로 합치지 않습니다.</p>
+    <figure><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="692.404931pt" height="440.39952pt" viewBox="0 0 692.404931 440.39952" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.0, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="svg_id_0">
+  <g id="svg_id_1">
+   <path d="M 0 440.39952 
+L 692.404931 440.39952 
+L 692.404931 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="svg_id_2">
+   <g id="svg_id_3">
+    <path d="M 119.16875 402.198739 
+L 595.702097 402.198739 
+L 595.702097 7.2 
+L 119.16875 7.2 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="svg_id_4">
+    <path d="M 119.16875 25.154488 
+L 187.136098 25.154488 
+L 187.136098 54.467938 
+L 119.16875 54.467938 
+z
+" clip-path="url(#svg_id_110)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_5">
+    <path d="M 119.16875 61.796301 
+L 130.536954 61.796301 
+L 130.536954 91.109751 
+L 119.16875 91.109751 
+z
+" clip-path="url(#svg_id_110)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_6">
+    <path d="M 119.16875 98.438113 
+L 121.426266 98.438113 
+L 121.426266 127.751563 
+L 119.16875 127.751563 
+z
+" clip-path="url(#svg_id_110)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_7">
+    <path d="M 119.16875 135.079926 
+L 120.378133 135.079926 
+L 120.378133 164.393376 
+L 119.16875 164.393376 
+z
+" clip-path="url(#svg_id_110)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_8">
+    <path d="M 119.16875 171.721738 
+L 119.571878 171.721738 
+L 119.571878 201.035188 
+L 119.16875 201.035188 
+z
+" clip-path="url(#svg_id_110)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_9">
+    <path d="M 119.16875 208.363551 
+L 119.89438 208.363551 
+L 119.89438 237.677001 
+L 119.16875 237.677001 
+z
+" clip-path="url(#svg_id_110)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_10">
+    <path d="M 119.16875 245.005363 
+L 119.249376 245.005363 
+L 119.249376 274.318813 
+L 119.16875 274.318813 
+z
+" clip-path="url(#svg_id_110)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_11">
+    <path d="M 119.16875 281.647176 
+L 119.491252 281.647176 
+L 119.491252 310.960626 
+L 119.16875 310.960626 
+z
+" clip-path="url(#svg_id_110)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_12">
+    <path d="M 119.16875 318.288988 
+L 119.975006 318.288988 
+L 119.975006 347.602438 
+L 119.16875 347.602438 
+z
+" clip-path="url(#svg_id_110)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_13">
+    <path d="M 119.16875 354.930801 
+L 120.055631 354.930801 
+L 120.055631 384.244251 
+L 119.16875 384.244251 
+z
+" clip-path="url(#svg_id_110)" style="fill: #386cb0"/>
+   </g>
+   <g id="svg_id_14">
+    <path d="M 187.136098 25.154488 
+L 528.665975 25.154488 
+L 528.665975 54.467938 
+L 187.136098 54.467938 
+z
+" clip-path="url(#svg_id_110)" style="fill: #f28e2b"/>
+   </g>
+   <g id="svg_id_15">
+    <path d="M 130.536954 61.796301 
+L 163.512809 61.796301 
+L 163.512809 91.109751 
+L 130.536954 91.109751 
+z
+" clip-path="url(#svg_id_110)" style="fill: #f28e2b"/>
+   </g>
+   <g id="svg_id_16">
+    <path d="M 121.426266 98.438113 
+L 135.938867 98.438113 
+L 135.938867 127.751563 
+L 121.426266 127.751563 
+z
+" clip-path="url(#svg_id_110)" style="fill: #f28e2b"/>
+   </g>
+   <g id="svg_id_17">
+    <path d="M 120.378133 135.079926 
+L 129.488822 135.079926 
+L 129.488822 164.393376 
+L 120.378133 164.393376 
+z
+" clip-path="url(#svg_id_110)" style="fill: #f28e2b"/>
+   </g>
+   <g id="svg_id_18">
+    <path d="M 119.571878 171.721738 
+L 124.409411 171.721738 
+L 124.409411 201.035188 
+L 119.571878 201.035188 
+z
+" clip-path="url(#svg_id_110)" style="fill: #f28e2b"/>
+   </g>
+   <g id="svg_id_19">
+    <path d="M 119.89438 208.363551 
+L 125.135042 208.363551 
+L 125.135042 237.677001 
+L 119.89438 237.677001 
+z
+" clip-path="url(#svg_id_110)" style="fill: #f28e2b"/>
+   </g>
+   <g id="svg_id_20">
+    <path d="M 119.249376 245.005363 
+L 121.265015 245.005363 
+L 121.265015 274.318813 
+L 119.249376 274.318813 
+z
+" clip-path="url(#svg_id_110)" style="fill: #f28e2b"/>
+   </g>
+   <g id="svg_id_21">
+    <path d="M 119.491252 281.647176 
+L 122.232521 281.647176 
+L 122.232521 310.960626 
+L 119.491252 310.960626 
+z
+" clip-path="url(#svg_id_110)" style="fill: #f28e2b"/>
+   </g>
+   <g id="svg_id_22">
+    <path d="M 119.975006 318.288988 
+L 121.990645 318.288988 
+L 121.990645 347.602438 
+L 119.975006 347.602438 
+z
+" clip-path="url(#svg_id_110)" style="fill: #f28e2b"/>
+   </g>
+   <g id="svg_id_23">
+    <path d="M 120.055631 354.930801 
+L 121.829394 354.930801 
+L 121.829394 384.244251 
+L 120.055631 384.244251 
+z
+" clip-path="url(#svg_id_110)" style="fill: #f28e2b"/>
+   </g>
+   <g id="svg_id_24">
+    <path d="M 528.665975 25.154488 
+L 572.848782 25.154488 
+L 572.848782 54.467938 
+L 528.665975 54.467938 
+z
+" clip-path="url(#svg_id_110)" style="fill: #59a14f"/>
+   </g>
+   <g id="svg_id_25">
+    <path d="M 163.512809 61.796301 
+L 166.979708 61.796301 
+L 166.979708 91.109751 
+L 163.512809 91.109751 
+z
+" clip-path="url(#svg_id_110)" style="fill: #59a14f"/>
+   </g>
+   <g id="svg_id_26">
+    <path d="M 135.938867 98.438113 
+L 136.42262 98.438113 
+L 136.42262 127.751563 
+L 135.938867 127.751563 
+z
+" clip-path="url(#svg_id_110)" style="fill: #59a14f"/>
+   </g>
+   <g id="svg_id_27">
+    <path d="M 129.488822 135.079926 
+L 132.471968 135.079926 
+L 132.471968 164.393376 
+L 129.488822 164.393376 
+z
+" clip-path="url(#svg_id_110)" style="fill: #59a14f"/>
+   </g>
+   <g id="svg_id_28">
+    <path d="M 124.409411 171.721738 
+L 125.69942 171.721738 
+L 125.69942 201.035188 
+L 124.409411 201.035188 
+z
+" clip-path="url(#svg_id_110)" style="fill: #59a14f"/>
+   </g>
+   <g id="svg_id_29">
+    <path d="M 125.135042 208.363551 
+L 125.135042 208.363551 
+L 125.135042 237.677001 
+L 125.135042 237.677001 
+z
+" clip-path="url(#svg_id_110)" style="fill: #59a14f"/>
+   </g>
+   <g id="svg_id_30">
+    <path d="M 121.265015 245.005363 
+L 122.7969 245.005363 
+L 122.7969 274.318813 
+L 121.265015 274.318813 
+z
+" clip-path="url(#svg_id_110)" style="fill: #59a14f"/>
+   </g>
+   <g id="svg_id_31">
+    <path d="M 122.232521 281.647176 
+L 122.393772 281.647176 
+L 122.393772 310.960626 
+L 122.232521 310.960626 
+z
+" clip-path="url(#svg_id_110)" style="fill: #59a14f"/>
+   </g>
+   <g id="svg_id_32">
+    <path d="M 121.990645 318.288988 
+L 121.990645 318.288988 
+L 121.990645 347.602438 
+L 121.990645 347.602438 
+z
+" clip-path="url(#svg_id_110)" style="fill: #59a14f"/>
+   </g>
+   <g id="svg_id_33">
+    <path d="M 121.829394 354.930801 
+L 121.990645 354.930801 
+L 121.990645 384.244251 
+L 121.829394 384.244251 
+z
+" clip-path="url(#svg_id_110)" style="fill: #59a14f"/>
+   </g>
+   <g id="svg_id_34">
+    <path d="M 572.848782 25.154488 
+L 573.010033 25.154488 
+L 573.010033 54.467938 
+L 572.848782 54.467938 
+z
+" clip-path="url(#svg_id_110)" style="fill: #b07aa1"/>
+   </g>
+   <g id="svg_id_35">
+    <path d="M 166.979708 61.796301 
+L 166.979708 61.796301 
+L 166.979708 91.109751 
+L 166.979708 91.109751 
+z
+" clip-path="url(#svg_id_110)" style="fill: #b07aa1"/>
+   </g>
+   <g id="svg_id_36">
+    <path d="M 136.42262 98.438113 
+L 136.42262 98.438113 
+L 136.42262 127.751563 
+L 136.42262 127.751563 
+z
+" clip-path="url(#svg_id_110)" style="fill: #b07aa1"/>
+   </g>
+   <g id="svg_id_37">
+    <path d="M 132.471968 135.079926 
+L 132.471968 135.079926 
+L 132.471968 164.393376 
+L 132.471968 164.393376 
+z
+" clip-path="url(#svg_id_110)" style="fill: #b07aa1"/>
+   </g>
+   <g id="svg_id_38">
+    <path d="M 125.69942 171.721738 
+L 125.69942 171.721738 
+L 125.69942 201.035188 
+L 125.69942 201.035188 
+z
+" clip-path="url(#svg_id_110)" style="fill: #b07aa1"/>
+   </g>
+   <g id="svg_id_39">
+    <path d="M 125.135042 208.363551 
+L 125.215667 208.363551 
+L 125.215667 237.677001 
+L 125.135042 237.677001 
+z
+" clip-path="url(#svg_id_110)" style="fill: #b07aa1"/>
+   </g>
+   <g id="svg_id_40">
+    <path d="M 122.7969 245.005363 
+L 122.7969 245.005363 
+L 122.7969 274.318813 
+L 122.7969 274.318813 
+z
+" clip-path="url(#svg_id_110)" style="fill: #b07aa1"/>
+   </g>
+   <g id="svg_id_41">
+    <path d="M 122.393772 281.647176 
+L 122.393772 281.647176 
+L 122.393772 310.960626 
+L 122.393772 310.960626 
+z
+" clip-path="url(#svg_id_110)" style="fill: #b07aa1"/>
+   </g>
+   <g id="svg_id_42">
+    <path d="M 121.990645 318.288988 
+L 121.990645 318.288988 
+L 121.990645 347.602438 
+L 121.990645 347.602438 
+z
+" clip-path="url(#svg_id_110)" style="fill: #b07aa1"/>
+   </g>
+   <g id="svg_id_43">
+    <path d="M 121.990645 354.930801 
+L 121.990645 354.930801 
+L 121.990645 384.244251 
+L 121.990645 384.244251 
+z
+" clip-path="url(#svg_id_110)" style="fill: #b07aa1"/>
+   </g>
+   <g id="svg_id_44">
+    <g id="svg_id_45">
+     <g id="svg_id_46">
+      <defs>
+       <path id="svg_id_47" d="M 0 0 
+L 0 3.5 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#svg_id_47" x="119.16875" y="402.198739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_48">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="119.16875" y="416.796395" transform="rotate(-0 119.16875 416.796395)">0</text>
+     </g>
+    </g>
+    <g id="svg_id_49">
+     <g id="svg_id_50">
+      <g>
+       <use xlink:href="#svg_id_47" x="199.794311" y="402.198739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_51">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="199.794311" y="416.796395" transform="rotate(-0 199.794311 416.796395)">1000</text>
+     </g>
+    </g>
+    <g id="svg_id_52">
+     <g id="svg_id_53">
+      <g>
+       <use xlink:href="#svg_id_47" x="280.419872" y="402.198739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_54">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="280.419872" y="416.796395" transform="rotate(-0 280.419872 416.796395)">2000</text>
+     </g>
+    </g>
+    <g id="svg_id_55">
+     <g id="svg_id_56">
+      <g>
+       <use xlink:href="#svg_id_47" x="361.045433" y="402.198739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_57">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="361.045433" y="416.796395" transform="rotate(-0 361.045433 416.796395)">3000</text>
+     </g>
+    </g>
+    <g id="svg_id_58">
+     <g id="svg_id_59">
+      <g>
+       <use xlink:href="#svg_id_47" x="441.670994" y="402.198739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_60">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="441.670994" y="416.796395" transform="rotate(-0 441.670994 416.796395)">4000</text>
+     </g>
+    </g>
+    <g id="svg_id_61">
+     <g id="svg_id_62">
+      <g>
+       <use xlink:href="#svg_id_47" x="522.296555" y="402.198739" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_63">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="522.296555" y="416.796395" transform="rotate(-0 522.296555 416.796395)">5000</text>
+     </g>
+    </g>
+    <g id="svg_id_64">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="357.435424" y="430.797176" transform="rotate(-0 357.435424 430.797176)">Stories</text>
+    </g>
+   </g>
+   <g id="svg_id_65">
+    <g id="svg_id_66">
+     <g id="svg_id_67">
+      <defs>
+       <path id="svg_id_68" d="M 0 0 
+L -3.5 0 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#svg_id_68" x="119.16875" y="39.811213" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_69">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="112.16875" y="43.610432" transform="rotate(-0 112.16875 43.610432)">Anthropic/Claude</text>
+     </g>
+    </g>
+    <g id="svg_id_70">
+     <g id="svg_id_71">
+      <g>
+       <use xlink:href="#svg_id_68" x="119.16875" y="76.453026" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_72">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="112.16875" y="80.252244" transform="rotate(-0 112.16875 80.252244)">Google/Gemini</text>
+     </g>
+    </g>
+    <g id="svg_id_73">
+     <g id="svg_id_74">
+      <g>
+       <use xlink:href="#svg_id_68" x="119.16875" y="113.094838" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_75">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="112.16875" y="116.894057" transform="rotate(-0 112.16875 116.894057)">Anysphere/Cursor</text>
+     </g>
+    </g>
+    <g id="svg_id_76">
+     <g id="svg_id_77">
+      <g>
+       <use xlink:href="#svg_id_68" x="119.16875" y="149.736651" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_78">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="112.16875" y="153.535869" transform="rotate(-0 112.16875 153.535869)">DeepSeek/DeepSeek</text>
+     </g>
+    </g>
+    <g id="svg_id_79">
+     <g id="svg_id_80">
+      <g>
+       <use xlink:href="#svg_id_68" x="119.16875" y="186.378463" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_81">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="112.16875" y="190.177682" transform="rotate(-0 112.16875 190.177682)">Alibaba/Qwen</text>
+     </g>
+    </g>
+    <g id="svg_id_82">
+     <g id="svg_id_83">
+      <g>
+       <use xlink:href="#svg_id_68" x="119.16875" y="223.020276" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_84">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="112.16875" y="226.819494" transform="rotate(-0 112.16875 226.819494)">Moonshot AI/Kimi</text>
+     </g>
+    </g>
+    <g id="svg_id_85">
+     <g id="svg_id_86">
+      <g>
+       <use xlink:href="#svg_id_68" x="119.16875" y="259.662088" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_87">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="112.16875" y="263.461307" transform="rotate(-0 112.16875 263.461307)">MiniMax/MiniMax</text>
+     </g>
+    </g>
+    <g id="svg_id_88">
+     <g id="svg_id_89">
+      <g>
+       <use xlink:href="#svg_id_68" x="119.16875" y="296.303901" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_90">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="112.16875" y="300.103119" transform="rotate(-0 112.16875 300.103119)">Meta/Llama</text>
+     </g>
+    </g>
+    <g id="svg_id_91">
+     <g id="svg_id_92">
+      <g>
+       <use xlink:href="#svg_id_68" x="119.16875" y="332.945713" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_93">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="112.16875" y="336.744932" transform="rotate(-0 112.16875 336.744932)">GitHub/Copilot</text>
+     </g>
+    </g>
+    <g id="svg_id_94">
+     <g id="svg_id_95">
+      <g>
+       <use xlink:href="#svg_id_68" x="119.16875" y="369.587526" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="svg_id_96">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end" x="112.16875" y="373.386744" transform="rotate(-0 112.16875 373.386744)">Mistral AI/Mistral</text>
+     </g>
+    </g>
+   </g>
+   <g id="svg_id_97">
+    <path d="M 119.16875 402.198739 
+L 119.16875 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_98">
+    <path d="M 595.702097 402.198739 
+L 595.702097 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_99">
+    <path d="M 119.16875 402.198739 
+L 595.702097 402.198739 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_100">
+    <path d="M 119.16875 7.2 
+L 595.702097 7.2 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="svg_id_101">
+    <g id="svg_id_102">
+     <path d="M 609.467431 23.798437 
+L 629.467431 23.798437 
+L 629.467431 16.798437 
+L 609.467431 16.798437 
+z
+" style="fill: #386cb0"/>
+    </g>
+    <g id="svg_id_103">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="637.467431" y="23.798437" transform="rotate(-0 637.467431 23.798437)">negative</text>
+    </g>
+    <g id="svg_id_104">
+     <path d="M 609.467431 38.799219 
+L 629.467431 38.799219 
+L 629.467431 31.799219 
+L 609.467431 31.799219 
+z
+" style="fill: #f28e2b"/>
+    </g>
+    <g id="svg_id_105">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="637.467431" y="38.799219" transform="rotate(-0 637.467431 38.799219)">neutral</text>
+    </g>
+    <g id="svg_id_106">
+     <path d="M 609.467431 53.8 
+L 629.467431 53.8 
+L 629.467431 46.8 
+L 609.467431 46.8 
+z
+" style="fill: #59a14f"/>
+    </g>
+    <g id="svg_id_107">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="637.467431" y="53.8" transform="rotate(-0 637.467431 53.8)">positive</text>
+    </g>
+    <g id="svg_id_108">
+     <path d="M 609.467431 68.800781 
+L 629.467431 68.800781 
+L 629.467431 61.800781 
+L 609.467431 61.800781 
+z
+" style="fill: #b07aa1"/>
+    </g>
+    <g id="svg_id_109">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="637.467431" y="68.800781" transform="rotate(-0 637.467431 68.800781)">mixed</text>
+    </g>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="svg_id_110">
+   <rect x="119.16875" y="7.2" width="476.533347" height="394.998739"/>
+  </clipPath>
+ </defs>
+</svg>
+<figcaption>최근 180일 evidence-verified extraction의 family별 stance 분포.</figcaption></figure>
+    <div class="table-scroll"><table><thead><tr><th scope="col">모델 family</th><th scope="col">stance 원문 label</th><th scope="col">story</th></tr></thead><tbody><tr><td>Alibaba/Qwen</td><td>negative</td><td>5</td></tr><tr><td>Alibaba/Qwen</td><td>neutral</td><td>60</td></tr><tr><td>Alibaba/Qwen</td><td>positive</td><td>16</td></tr><tr><td>Anthropic/Claude</td><td>mixed</td><td>2</td></tr><tr><td>Anthropic/Claude</td><td>negative</td><td>843</td></tr><tr><td>Anthropic/Claude</td><td>neutral</td><td>4,236</td></tr><tr><td>Anthropic/Claude</td><td>positive</td><td>548</td></tr><tr><td>Anysphere/Cursor</td><td>negative</td><td>28</td></tr><tr><td>Anysphere/Cursor</td><td>neutral</td><td>180</td></tr><tr><td>Anysphere/Cursor</td><td>positive</td><td>6</td></tr><tr><td>Baidu/ERNIE</td><td>neutral</td><td>2</td></tr><tr><td>ByteDance/Doubao</td><td>negative</td><td>1</td></tr><tr><td>ByteDance/Doubao</td><td>neutral</td><td>1</td></tr><tr><td>Cohere/Command</td><td>negative</td><td>1</td></tr><tr><td>Cohere/Command</td><td>neutral</td><td>1</td></tr><tr><td>DeepSeek/DeepSeek</td><td>negative</td><td>15</td></tr><tr><td>DeepSeek/DeepSeek</td><td>neutral</td><td>113</td></tr><tr><td>DeepSeek/DeepSeek</td><td>positive</td><td>37</td></tr><tr><td>GitHub/Copilot</td><td>negative</td><td>10</td></tr><tr><td>GitHub/Copilot</td><td>neutral</td><td>25</td></tr><tr><td>Google/Gemini</td><td>negative</td><td>141</td></tr><tr><td>Google/Gemini</td><td>neutral</td><td>409</td></tr><tr><td>Google/Gemini</td><td>positive</td><td>43</td></tr><tr><td>Google/Gemma</td><td>negative</td><td>1</td></tr><tr><td>Google/Gemma</td><td>neutral</td><td>25</td></tr><tr><td>Google/Gemma</td><td>positive</td><td>3</td></tr><tr><td>Meta/Llama</td><td>negative</td><td>4</td></tr><tr><td>Meta/Llama</td><td>neutral</td><td>34</td></tr><tr><td>Meta/Llama</td><td>positive</td><td>2</td></tr><tr><td>Microsoft/Copilot</td><td>negative</td><td>4</td></tr><tr><td>Microsoft/Copilot</td><td>neutral</td><td>15</td></tr><tr><td>MiniMax/MiniMax</td><td>negative</td><td>1</td></tr><tr><td>MiniMax/MiniMax</td><td>neutral</td><td>25</td></tr><tr><td>MiniMax/MiniMax</td><td>positive</td><td>19</td></tr><tr><td>Mistral AI/Mistral</td><td>negative</td><td>11</td></tr><tr><td>Mistral AI/Mistral</td><td>neutral</td><td>22</td></tr><tr><td>Mistral AI/Mistral</td><td>positive</td><td>2</td></tr><tr><td>Moonshot AI/Kimi</td><td>mixed</td><td>1</td></tr><tr><td>Moonshot AI/Kimi</td><td>negative</td><td>9</td></tr><tr><td>Moonshot AI/Kimi</td><td>neutral</td><td>65</td></tr></tbody></table></div>
+    <p class="denominator">추출 경로 분모: 최신 성공 extraction 중 evidence-verified observation입니다. 전체 수집 story 수와 같지 않습니다.</p>
+  </section>
+  <section aria-labelledby="limitations-heading">
+    <h2 id="limitations-heading">신뢰도와 한계</h2>
+    <div class="limitations"><ul>
+      <li>수집 범위는 collector keyword와 수동 실행 시점에 영향을 받습니다.</li>
+      <li>candidate 전체 수집본과 extraction 표본은 서로 다른 분모이므로 직접 비율 비교에 사용하면 안 됩니다.</li>
+      <li>catalog에 없는 모델은 candidate 경로에서 보이지 않을 수 있습니다.</li>
+      <li>lexical alias matching에는 문맥에 따른 false positive 가능성이 남아 있습니다.</li>
+      <li>framing은 evidence-verified extraction만 사용하며, 검증되지 않은 추출은 포함하지 않습니다.</li>
+      <li>story의 참여도와 stance는 댓글 sentiment나 모델에 대한 사용자 선호를 뜻하지 않습니다.</li>
+    </ul></div>
+  </section>
+  <section aria-labelledby="appendix-heading">
+    <h2 id="appendix-heading">기술 부록</h2>
+    <details open>
+      <summary>계산, 버전, 재생성 기준</summary>
+      <p>Gold 함수: <code>candidate_mention_timeseries</code>, <code>candidate_emerging_models</code>, <code>candidate_model_lineup</code>, <code>candidate_model_cooccurrence</code>, <code>model_framing_sentiment</code>.</p>
+      <p>시간 기준: <code>AS_OF = MAX(stories.created_at)</code>이며 UTC를 사용합니다. 시계열·co-occurrence·framing은 최근 180일, 시계열 bucket은 7일, lineup은 전체 이력과 30.00일 half-life를 사용합니다. emerging은 최근 24시간과 직전 24시간을 비교합니다.</p>
+      <p>버전 메타데이터: collection=v2; prompt=schema-free-v2; catalog=2026-07-17c.</p>
+      <p>빈 Gold 결과는 차트와 표에서 "해당 기준에서 관측된 결과 없음"으로 표시합니다. 재생성: <code>python3 build_report.py --db ai_monitor.db --output analysis_report.html</code>.</p>
+      <p>수동 검수 상태: <code>data/manual_review_template.csv</code> 기반의 고정 시드 30-story 검수는 별도 사람이 채우는 절차이며, 이 정적 보고서에는 precision/recall 값을 자동 주장하지 않습니다.</p>
+    </details>
+  </section>
+</main>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 
 import pandas as pd
@@ -16,7 +17,7 @@ from build_report import (
     main,
     render_report,
 )
-from db import save_extraction
+from db import save_extraction, upsert_story_candidates
 from reference_data import import_catalog
 
 
@@ -41,6 +42,82 @@ def _import_catalog(conn, tmp_path):
         "aliases": ["GPT-5"],
     }]))
     import_catalog(conn, path)
+
+
+def _populate_cli_smoke_data(conn, tmp_path):
+    catalog_path = tmp_path / "smoke-catalog.json"
+    catalog_path.write_text(json.dumps([
+        {
+            "model_id": "openai:gpt:5",
+            "vendor": "OpenAI",
+            "family": "GPT",
+            "version": "5",
+            "release_source_url": "https://openai.example/gpt-5",
+            "catalog_version": "v1",
+            "aliases": ["GPT-5"],
+        },
+        {
+            "model_id": "anthropic:claude:4",
+            "vendor": "Anthropic",
+            "family": "Claude",
+            "version": "4",
+            "release_source_url": "https://anthropic.example/claude-4",
+            "catalog_version": "v1",
+            "aliases": ["Claude-4"],
+        },
+    ]))
+    import_catalog(conn, catalog_path)
+
+    stories = [
+        ("story-1", "2026-07-13T10:00:00Z", 1783936800),
+        ("story-2", "2026-07-13T11:00:00Z", 1783940400),
+        ("story-3", "2026-07-14T10:00:00Z", 1784023200),
+    ]
+    for story_id, created_at, created_at_i in stories:
+        conn.execute(
+            "INSERT INTO stories (id, source, title, created_at, created_at_i, fetched_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                story_id,
+                "hackernews",
+                "GPT-5 Claude-4 comparison",
+                created_at,
+                created_at_i,
+                created_at,
+            ),
+        )
+        upsert_story_candidates(conn, [{
+            "story_id": story_id,
+            "catalog_version": "v1",
+            "candidate_reason": "catalog_alias_match",
+            "matched_model_ids": json.dumps(["openai:gpt:5", "anthropic:claude:4"]),
+            "evidence_json": json.dumps([
+                {"model_id": "openai:gpt:5", "alias": "GPT-5", "field": "title", "quote": "GPT-5"},
+                {"model_id": "anthropic:claude:4", "alias": "Claude-4", "field": "title", "quote": "Claude-4"},
+            ]),
+            "selected_at": "2026-07-14T10:02:00Z",
+        }])
+        payload = {
+            "relevant": True,
+            "observations": [
+                {"surface": "GPT-5", "evidence_verified": True, "attributes": {"stance": "positive"}},
+                {"surface": "Claude-4", "evidence_verified": True, "attributes": {"stance": "skeptical"}},
+            ],
+            "extensions": {},
+        }
+        save_extraction(conn, {
+            "story_id": story_id,
+            "prompt_version": "smoke-v1",
+            "model": "test",
+            "status": "succeeded",
+            "raw_response": json.dumps(payload),
+            "parsed_json": json.dumps(payload),
+            "input_hash": f"smoke-{story_id}",
+            "input_char_count": 1,
+            "input_truncated": 0,
+            "error_message": None,
+            "enriched_at": "2026-07-14T10:02:00Z",
+        })
 
 
 @pytest.fixture
@@ -120,8 +197,10 @@ def test_build_report_writes_self_contained_html(temporary_db, tmp_path):
     assert "해당 기준에서 관측된 결과 없음" in html
 
 
-def test_main_writes_report_for_valid_database(temporary_db, tmp_path, monkeypatch):
-    _insert_story(temporary_db)
+def test_main_writes_self_contained_report_for_valid_database(
+    temporary_db, tmp_path, monkeypatch
+):
+    _populate_cli_smoke_data(temporary_db, tmp_path)
     output_path = tmp_path / "from_cli.html"
     monkeypatch.setattr(
         sys,
@@ -132,6 +211,14 @@ def test_main_writes_report_for_valid_database(temporary_db, tmp_path, monkeypat
     main()
 
     assert output_path.exists()
+    html = output_path.read_text(encoding="utf-8")
+    assert output_path.stat().st_size > 10_000
+    assert "<svg" in html
+    assert "2026-07-14T10:00:00Z" in html
+    assert not re.search(
+        r"<(?:embed|iframe|img|link|object|script)\\b[^>]*https://", html,
+    )
+    assert "Jupyter" not in html
 
 
 def test_main_exits_nonzero_with_clear_error_for_missing_database(tmp_path, monkeypatch, capsys):
@@ -224,6 +311,30 @@ def test_chart_renderer_returns_inline_svg_for_timeseries():
 
     assert svg.lstrip().startswith("<svg")
     assert "OpenAI/GPT" in svg
+
+
+def test_timeseries_chart_formats_and_bounds_unix_bucket_labels():
+    svg = _render_timeseries_chart([
+        {
+            "group_label": "OpenAI/GPT",
+            "bucket_start": 1784023200 - index * 7 * 86400,
+            "story_count": index + 1,
+        }
+        for index in range(12)
+    ])
+
+    assert "2026-07-14" in svg
+    assert "1784023200" not in svg
+    assert svg.count("2026-") <= 8
+
+
+def test_render_report_formats_unix_bucket_in_summary(sample_report):
+    sample_report["timeseries"][0]["bucket_start"] = 1784023200
+
+    html = render_report(sample_report)
+
+    assert "bucket(2026-07-14)" in html
+    assert "bucket(1784023200)" not in html
 
 
 @pytest.mark.parametrize(

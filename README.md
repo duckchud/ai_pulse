@@ -19,6 +19,18 @@ pytest -q                            # 오프라인 테스트 스위트 실행
 jupyter notebook analysis.ipynb      # Gold 산출물 시각화 + 수동 리뷰 샘플 확인
 ```
 
+## 정적 분석 보고서
+
+커밋된 `analysis_report.html`은 로컬 `ai_monitor.db`에서 생성한 정적 스냅샷이다. 최신
+수집 및 추출 결과를 반영하려면 저장소 루트에서 다음 명령으로 다시 생성한다.
+
+```bash
+python3 build_report.py --db ai_monitor.db --output analysis_report.html
+```
+
+`analysis_report.html`은 공유·검토용 결과물이고, `analysis.ipynb`는 Gold 결과를 탐색하고
+재현하는 노트북으로 유지한다.
+
 ## Silver 추출은 세션에서 한다
 
 이 파이프라인은 모델 API를 호출하지 않는다. Silver 추출은 에이전트 세션이 스킬

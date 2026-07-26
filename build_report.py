@@ -5,6 +5,7 @@ import html
 import io
 import re
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 import matplotlib
@@ -179,13 +180,25 @@ def _figure(height: float = 3.8):
     return plt.subplots(figsize=(9.5, height), constrained_layout=True)
 
 
+def _bucket_label(value) -> str:
+    """Format persisted Unix bucket starts as readable UTC dates."""
+    try:
+        timestamp = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if timestamp < 1_000_000_000:
+        return str(value)
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc).date().isoformat()
+
+
 def _render_timeseries_chart(rows: list[dict], limit: int | None = None) -> str:
     """Return inline SVG or the Korean empty-state HTML."""
     if not rows:
         return _empty_chart()
 
-    frame = pd.DataFrame(rows)
-    labels = sorted(frame["bucket_start"].astype(str).unique())
+    frame = pd.DataFrame(rows).copy()
+    frame["bucket_label"] = frame["bucket_start"].map(_bucket_label)
+    labels = sorted(frame["bucket_label"].unique())
     groups = list(dict.fromkeys(frame["group_label"].astype(str)))
     if limit is not None:
         groups = groups[:limit]
@@ -194,10 +207,15 @@ def _render_timeseries_chart(rows: list[dict], limit: int | None = None) -> str:
     for group in groups:
         group_frame = frame[frame["group_label"].astype(str) == group].copy()
         values = group_frame.assign(
-            bucket_start=group_frame["bucket_start"].astype(str)
-        ).set_index("bucket_start")["story_count"].reindex(labels, fill_value=0)
+            bucket_label=group_frame["bucket_label"].astype(str)
+        ).set_index("bucket_label")["story_count"].reindex(labels, fill_value=0)
         ax.plot(x, values.tolist(), marker="o", linewidth=1.8, label=group)
-    ax.set_xticks(list(x), labels, rotation=35, ha="right")
+    tick_count = min(8, len(labels))
+    tick_positions = [
+        round(index * (len(labels) - 1) / max(1, tick_count - 1))
+        for index in range(tick_count)
+    ]
+    ax.set_xticks(tick_positions, [labels[index] for index in tick_positions], rotation=35, ha="right")
     ax.set_ylabel("Stories")
     ax.set_ylim(bottom=0)
     ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1), frameon=False)
@@ -412,7 +430,7 @@ def _summary_observations(report: dict) -> list[str]:
         ]
         leading = max(latest_rows, key=lambda row: row.get("story_count", 0))
         observations.append(
-            f"가장 최근 주간 bucket({html.escape(latest_bucket)})에서 "
+            f"가장 최근 주간 bucket({_text(_bucket_label(latest_bucket))})에서 "
             f"{_text(leading.get('group_label'))} family가 "
             f"{_number(leading.get('story_count'))}건으로 가장 많이 관측되었습니다."
         )
@@ -519,9 +537,9 @@ body {{ margin: 0; background: #f6f7f8; line-height: 1.55; }}
 main {{ max-width: 1120px; margin: 0 auto; padding: 28px 24px 56px; }}
 header, section {{ border-bottom: 1px solid #d8dde3; padding: 28px 0; }}
 header {{ padding-top: 8px; }}
-h1, h2, h3 {{ color: #111827; margin: 0 0 12px; letter-spacing: 0; }}
+h1, h2, h3 {{ color: #111827; margin: 0 0 12px; letter-spacing: 0; overflow-wrap: anywhere; }}
 h1 {{ font-size: 2.1rem; }} h2 {{ font-size: 1.35rem; }} h3 {{ font-size: 1rem; }}
-p {{ margin: 0 0 12px; }} .subtitle {{ color: #4b5563; font-size: 1.05rem; }}
+p, li {{ margin: 0 0 12px; overflow-wrap: anywhere; }} .subtitle {{ color: #4b5563; font-size: 1.05rem; }}
 .meta, .denominator, figcaption, .muted {{ color: #59636e; font-size: .9rem; }}
 .kpis {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 22px 0 0; }}
 .kpis div {{ border-left: 4px solid #2563eb; background: #fff; padding: 14px 16px; }}
