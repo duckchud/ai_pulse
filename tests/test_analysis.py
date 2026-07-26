@@ -235,6 +235,53 @@ def test_candidate_mention_timeseries_buckets_by_week_and_counts_story_once(temp
     assert frame["candidate_reason"].tolist() == ["catalog_alias_match", "catalog_alias_match"]
 
 
+def test_candidate_cooccurrence_lookback_days_excludes_old_stories(temporary_db, tmp_path):
+    _import_catalog(temporary_db, tmp_path, [
+        {"model_id": "openai:gpt", "vendor": "OpenAI", "family": "GPT", "version": None,
+         "released_on": None, "release_source_url": "https://example.test/gpt",
+         "catalog_version": "v1", "aliases": ["GPT"]},
+        {"model_id": "anthropic:claude", "vendor": "Anthropic", "family": "Claude", "version": None,
+         "released_on": None, "release_source_url": "https://example.test/claude",
+         "catalog_version": "v1", "aliases": ["Claude"]},
+    ])
+    as_of = "2026-07-14T12:00:00Z"
+    as_of_ts = 1784023200 + 12 * 3600
+    _insert_story(temporary_db, "story-recent", created_at_i=as_of_ts - 5 * 86400)
+    _insert_story(temporary_db, "story-old", created_at_i=as_of_ts - 200 * 86400)
+    for story_id in ("story-recent", "story-old"):
+        _candidate(temporary_db, story_id, ["openai:gpt", "anthropic:claude"])
+
+    unbounded = candidate_model_cooccurrence(temporary_db, as_of, "family", min_count=1)
+    assert unbounded.iloc[0]["story_count"] == 2
+
+    windowed = candidate_model_cooccurrence(temporary_db, as_of, "family", min_count=1, lookback_days=180)
+    assert windowed.iloc[0]["story_count"] == 1
+
+
+def test_model_framing_sentiment_lookback_days_excludes_old_stories(temporary_db, tmp_path):
+    _import_catalog(temporary_db, tmp_path, [{
+        "model_id": "openai:gpt:5", "vendor": "OpenAI", "family": "GPT", "version": "5",
+        "released_on": "2026-01-01", "release_source_url": "https://openai.example/gpt5",
+        "catalog_version": "v1", "aliases": ["GPT-5"],
+    }])
+    as_of = "2026-07-14T12:00:00Z"
+    as_of_ts = 1784023200 + 12 * 3600
+    _insert_story(temporary_db, "story-recent", created_at_i=as_of_ts - 5 * 86400)
+    _insert_story(temporary_db, "story-old", created_at_i=as_of_ts - 200 * 86400)
+    _save(temporary_db, "story-recent", [
+        {"surface": "GPT-5", "evidence_verified": True, "attributes": {"stance": "excited"}},
+    ])
+    _save(temporary_db, "story-old", [
+        {"surface": "GPT-5", "evidence_verified": True, "attributes": {"stance": "excited"}},
+    ])
+
+    unbounded = model_framing_sentiment(temporary_db, as_of=as_of, group_level="family")
+    assert unbounded.iloc[0]["story_count"] == 2
+
+    windowed = model_framing_sentiment(temporary_db, as_of=as_of, group_level="family", lookback_days=180)
+    assert windowed.iloc[0]["story_count"] == 1
+
+
 @pytest.mark.parametrize("function", [candidate_emerging_models, candidate_model_cooccurrence])
 def test_candidate_gold_rejects_nonempty_mixed_catalog_versions(temporary_db, function):
     temporary_db.executemany(

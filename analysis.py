@@ -462,6 +462,20 @@ def model_cooccurrence(
     return result[_COOCCURRENCE_COLUMNS]
 
 
+def _filter_since(df: pd.DataFrame, as_of, lookback_days: float | None) -> pd.DataFrame:
+    """as_of 기준 ``lookback_days``만큼만 거슬러 올라간 행만 남긴다.
+
+    ``lookback_days``가 None이면 필터 없이 df를 그대로 돌려준다(전체 수집
+    기간 — 하위호환 기본값). candidate_model_cooccurrence/model_framing_sentiment/
+    candidate_mention_timeseries 세 곳이 공유하는 "as_of - lookback_days"
+    컷오프 계산을 한 곳에만 둔다.
+    """
+    if lookback_days is None:
+        return df
+    as_of_ts = _parse_as_of(as_of)
+    return df[df["created_at_i"] >= as_of_ts - lookback_days * 86400]
+
+
 def _apply_candidate_metadata(result: pd.DataFrame, mentions: pd.DataFrame, as_of) -> None:
     """candidate_* Gold 함수 3곳이 공유하는 재현성 컬럼을 result에 in-place로 채운다.
 
@@ -545,17 +559,21 @@ def candidate_emerging_models(
 
 
 def candidate_model_cooccurrence(
-    conn: sqlite3.Connection, as_of, group_level: str, min_count: int = 2
+    conn: sqlite3.Connection, as_of, group_level: str, min_count: int = 2,
+    lookback_days: float | None = None,
 ) -> pd.DataFrame:
     """catalog alias 후보의 서로 다른 모델 그룹 쌍을 story당 한 번만 센다.
 
     pair 생성·중복 제거·최소 빈도 규칙은 ``model_cooccurrence``와 같으며,
-    candidate 입력은 모두 catalog에 연결된 resolved 모델이다.
+    candidate 입력은 모두 catalog에 연결된 resolved 모델이다. ``lookback_days``를
+    주면 as_of 기준 그 일수만큼만 거슬러 올라가 집계한다(기본값 None은 전체
+    수집 기간 — 기존 동작과 동일하게 유지되는 하위호환 기본값).
     """
     _validate_group_level(group_level)
     mentions = _load_candidate_mentions(conn)
     if mentions.empty:
         return pd.DataFrame(columns=_CANDIDATE_COOCCURRENCE_COLUMNS)
+    mentions = _filter_since(mentions, as_of, lookback_days)
 
     grouped = _add_group_columns(mentions, group_level)
     dedup = grouped.drop_duplicates(subset=["story_id", "group_key"])
@@ -653,7 +671,6 @@ def candidate_mention_timeseries(
         raise ValueError("bucket_days must be positive")
     as_of_ts = _parse_as_of(as_of)
     bucket_seconds = bucket_days * 86400
-    lookback_start = as_of_ts - lookback_days * 86400
 
     mentions = _load_candidate_mentions(conn)
     if mentions.empty:
@@ -661,9 +678,8 @@ def candidate_mention_timeseries(
 
     grouped = _add_group_columns(mentions, group_level)
     dedup = grouped.drop_duplicates(subset=["story_id", "group_key"])
-    windowed = dedup[
-        (dedup["created_at_i"] >= lookback_start) & (dedup["created_at_i"] < as_of_ts)
-    ].copy()
+    windowed = _filter_since(dedup, as_of, lookback_days)
+    windowed = windowed[windowed["created_at_i"] < as_of_ts].copy()
     if windowed.empty:
         return pd.DataFrame(columns=_CANDIDATE_TIMESERIES_COLUMNS)
 
@@ -687,13 +703,16 @@ def candidate_mention_timeseries(
 
 
 def model_framing_sentiment(
-    conn: sqlite3.Connection, as_of, group_level: str, model_id: str | None = None
+    conn: sqlite3.Connection, as_of, group_level: str, model_id: str | None = None,
+    lookback_days: float | None = None,
 ) -> pd.DataFrame:
     """검증된 evidence와 비어있지 않은 attributes.stance가 있는 observation만
     집계한다. stance 원문 라벨을 그대로 보존하고(닫힌 집합으로 강제하지
-    않음), story별로 (그룹, stance) 조합을 한 번만 센다."""
+    않음), story별로 (그룹, stance) 조합을 한 번만 센다. ``lookback_days``를
+    주면 as_of 기준 그 일수만큼만 거슬러 올라가 집계한다(기본값 None은 전체
+    수집 기간 — 기존 동작과 동일하게 유지되는 하위호환 기본값)."""
     _validate_group_level(group_level)
-    obs_df = _load_verified_observations(conn)
+    obs_df = _filter_since(_load_verified_observations(conn), as_of, lookback_days)
     meta = _metadata(conn, obs_df, as_of)
     if obs_df.empty:
         return pd.DataFrame(columns=_FRAMING_COLUMNS)
