@@ -95,6 +95,18 @@ def test_render_report_escapes_dynamic_text(sample_report):
     assert "<script>alert(1)</script>" not in html
 
 
+def test_render_report_selects_highest_cooccurrence_pair(sample_report):
+    sample_report["timeseries"] = []
+    sample_report["cooccurrence"] = [
+        {"family_a": "Alpha", "family_b": "Beta", "story_count": 2},
+        {"family_a": "Gamma", "family_b": "Delta", "story_count": 9},
+    ]
+
+    html = render_report(sample_report)
+
+    assert "함께 언급된 상위 조합은 Gamma와 Delta이며" in html
+
+
 def test_build_report_writes_self_contained_html(temporary_db, tmp_path):
     _insert_story(temporary_db)
     _import_catalog(temporary_db, tmp_path)

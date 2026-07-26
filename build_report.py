@@ -48,6 +48,32 @@ def _frame_records(frame: pd.DataFrame, limit: int) -> list[dict]:
     return frame.head(limit).where(pd.notna(frame), None).to_dict("records")
 
 
+def _cooccurrence_pair_label(row: dict, suffix: str) -> str:
+    return "/".join(
+        str(row.get(f"{field}_{suffix}"))
+        for field in ("vendor", "family", "version")
+        if row.get(f"{field}_{suffix}") not in (None, "")
+    )
+
+
+def _cooccurrence_sort_key(row: dict) -> tuple:
+    try:
+        story_count = float(row.get("story_count", 0))
+        if story_count != story_count:
+            story_count = 0.0
+    except (TypeError, ValueError):
+        story_count = 0.0
+    return (
+        -story_count,
+        _cooccurrence_pair_label(row, "a"),
+        _cooccurrence_pair_label(row, "b"),
+    )
+
+
+def _sort_cooccurrence_rows(rows: list[dict]) -> list[dict]:
+    return sorted(rows, key=_cooccurrence_sort_key)
+
+
 def _load_summary_counts(conn: sqlite3.Connection) -> dict[str, int]:
     stories = conn.execute("SELECT COUNT(*) FROM stories").fetchone()[0]
     catalog_models = conn.execute("SELECT COUNT(*) FROM model_catalog").fetchone()[0]
@@ -86,6 +112,9 @@ def build_report_data(
         lookback_days=lookback_days,
     )
     summary = _load_summary_counts(conn)
+    cooccurrence_rows = _sort_cooccurrence_rows(
+        _frame_records(cooccurrence, len(cooccurrence))
+    )[:top_n]
     return {
         "metadata": {
             "as_of": as_of,
@@ -113,7 +142,7 @@ def build_report_data(
         "timeseries": _frame_records(timeseries, top_n * 6),
         "emerging": _frame_records(emerging, top_n),
         "lineup": _frame_records(lineup, top_n),
-        "cooccurrence": _frame_records(cooccurrence, top_n),
+        "cooccurrence": cooccurrence_rows,
         "framing": _frame_records(framing, top_n * 4),
     }
 
@@ -406,7 +435,7 @@ def _summary_observations(report: dict) -> list[str]:
             f"최신성 가중 라인업에서는 {label}의 가중 story 합계가 "
             f"{_decimal(leading.get('weighted_count'))}입니다."
         )
-    cooccurrence = report.get("cooccurrence", [])
+    cooccurrence = _sort_cooccurrence_rows(report.get("cooccurrence", []))
     if cooccurrence:
         leading = cooccurrence[0]
         observations.append(
