@@ -1,6 +1,7 @@
 """Build report data and render its focused chart fragments."""
 
 import io
+import re
 import sqlite3
 
 import matplotlib
@@ -22,11 +23,11 @@ from db import latest_successful_extractions
 
 _EMPTY_CHART = '<p class="chart-empty">해당 기준에서 관측된 결과 없음</p>'
 _CHART_RENDERERS = {
-    "timeseries": lambda rows: _render_timeseries_chart(rows),
-    "emerging": lambda rows: _render_emerging_chart(rows),
-    "lineup": lambda rows: _render_lineup_chart(rows),
-    "cooccurrence": lambda rows: _render_cooccurrence_chart(rows),
-    "framing": lambda rows: _render_framing_chart(rows),
+    "timeseries": lambda rows, limit=None: _render_timeseries_chart(rows, limit=limit),
+    "emerging": lambda rows, limit=None: _render_emerging_chart(rows, limit=limit),
+    "lineup": lambda rows, limit=None: _render_lineup_chart(rows, limit=limit),
+    "cooccurrence": lambda rows, limit=None: _render_cooccurrence_chart(rows, limit=limit),
+    "framing": lambda rows, limit=None: _render_framing_chart(rows, limit=limit),
 }
 
 
@@ -79,7 +80,7 @@ def build_report_data(
     summary = _load_summary_counts(conn)
     return {
         "metadata": {"as_of": as_of, "lookback_days": lookback_days,
-                     "bucket_days": 7, "half_life_days": 30.0},
+                     "bucket_days": 7, "half_life_days": 30.0, "top_n": top_n},
         "summary": summary,
         "timeseries": _frame_records(timeseries, top_n * 6),
         "emerging": _frame_records(emerging, top_n),
@@ -93,28 +94,44 @@ def _empty_chart() -> str:
     return _EMPTY_CHART
 
 
+def _normalize_svg(svg: str) -> str:
+    """Remove render-time SVG metadata and normalize generated references."""
+    svg = re.sub(r"<dc:date>.*?</dc:date>\n", "", svg)
+    ids = re.findall(r'id="([^"]+)"', svg)
+    replacements = {
+        old: f"svg_id_{index}" for index, old in enumerate(dict.fromkeys(ids))
+    }
+    for old, new in replacements.items():
+        svg = svg.replace(f'id="{old}"', f'id="{new}"')
+        svg = svg.replace(f'url(#{old})', f'url(#{new})')
+        svg = svg.replace(f'href="#{old}"', f'href="#{new}"')
+    return svg
+
+
 def _svg_from_figure(fig) -> str:
     """Serialize a figure as standalone inline SVG without an XML preamble."""
     buffer = io.BytesIO()
     with matplotlib.rc_context({"svg.fonttype": "none"}):
-        fig.savefig(buffer, format="svg", bbox_inches="tight")
+        fig.savefig(buffer, format="svg", bbox_inches="tight", metadata={"Date": None})
     plt.close(fig)
     svg = buffer.getvalue().decode("utf-8")
-    return svg[svg.find("<svg") :]
+    return _normalize_svg(svg[svg.find("<svg") :])
 
 
 def _figure(height: float = 3.8):
     return plt.subplots(figsize=(9.5, height), constrained_layout=True)
 
 
-def _render_timeseries_chart(rows: list[dict]) -> str:
+def _render_timeseries_chart(rows: list[dict], limit: int | None = None) -> str:
     """Return inline SVG or the Korean empty-state HTML."""
     if not rows:
         return _empty_chart()
 
     frame = pd.DataFrame(rows)
     labels = sorted(frame["bucket_start"].astype(str).unique())
-    groups = list(dict.fromkeys(frame["group_label"].astype(str)))[:10]
+    groups = list(dict.fromkeys(frame["group_label"].astype(str)))
+    if limit is not None:
+        groups = groups[:limit]
     fig, ax = _figure(max(3.8, 2.6 + len(groups) * 0.12))
     x = range(len(labels))
     for group in groups:
@@ -142,11 +159,13 @@ def _render_horizontal_bars(labels, values, xlabel: str) -> str:
     return _svg_from_figure(fig)
 
 
-def _render_emerging_chart(rows: list[dict]) -> str:
+def _render_emerging_chart(rows: list[dict], limit: int | None = None) -> str:
     """Return inline SVG or the Korean empty-state HTML."""
     if not rows:
         return _empty_chart()
-    frame = pd.DataFrame(rows).head(10)
+    frame = pd.DataFrame(rows)
+    if limit is not None:
+        frame = frame.head(limit)
     return _render_horizontal_bars(
         frame["group_label"].astype(str).tolist(),
         frame["mention_delta"].astype(float).tolist(),
@@ -154,11 +173,13 @@ def _render_emerging_chart(rows: list[dict]) -> str:
     )
 
 
-def _render_lineup_chart(rows: list[dict]) -> str:
+def _render_lineup_chart(rows: list[dict], limit: int | None = None) -> str:
     """Return inline SVG or the Korean empty-state HTML."""
     if not rows:
         return _empty_chart()
-    frame = pd.DataFrame(rows).head(10).copy()
+    frame = pd.DataFrame(rows).copy()
+    if limit is not None:
+        frame = frame.head(limit)
     frame["label"] = frame.apply(
         lambda row: "/".join(
             str(value)
@@ -174,11 +195,13 @@ def _render_lineup_chart(rows: list[dict]) -> str:
     )
 
 
-def _render_cooccurrence_chart(rows: list[dict]) -> str:
+def _render_cooccurrence_chart(rows: list[dict], limit: int | None = None) -> str:
     """Return inline SVG or the Korean empty-state HTML."""
     if not rows:
         return _empty_chart()
-    frame = pd.DataFrame(rows).head(10).copy()
+    frame = pd.DataFrame(rows).copy()
+    if limit is not None:
+        frame = frame.head(limit)
     frame["label"] = frame.apply(
         lambda row: " + ".join(
             "/".join(
@@ -199,13 +222,15 @@ def _render_cooccurrence_chart(rows: list[dict]) -> str:
     )
 
 
-def _render_framing_chart(rows: list[dict]) -> str:
+def _render_framing_chart(rows: list[dict], limit: int | None = None) -> str:
     """Return inline SVG or the Korean empty-state HTML."""
     if not rows:
         return _empty_chart()
     frame = pd.DataFrame(rows).copy()
     totals = frame.groupby("group_label")["story_count"].sum().sort_values(ascending=False)
-    groups = totals.head(10).index.tolist()
+    groups = totals.index.tolist()
+    if limit is not None:
+        groups = groups[:limit]
     stances = list(dict.fromkeys(frame["stance"].astype(str)))
     fig, ax = _figure(max(3.8, 2.6 + len(groups) * 0.34))
     positions = list(range(len(groups)))
@@ -231,10 +256,12 @@ def _render_framing_chart(rows: list[dict]) -> str:
     return _svg_from_figure(fig)
 
 
-def _render_chart(report_key: str, rows: list[dict]) -> str:
+def _render_chart(
+    report_key: str, rows: list[dict], limit: int | None = None
+) -> str:
     """Render a report section's chart from the stable report-data key."""
     try:
         renderer = _CHART_RENDERERS[report_key]
     except KeyError as exc:
         raise ValueError(f"unknown report chart key: {report_key!r}") from exc
-    return renderer(rows)
+    return renderer(rows, limit=limit)

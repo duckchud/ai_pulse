@@ -142,3 +142,31 @@ def test_render_chart_dispatches_report_key():
     svg = _render_chart("emerging", [{"group_label": "OpenAI/GPT", "mention_delta": 1}])
 
     assert svg.lstrip().startswith("<svg")
+
+
+@pytest.mark.parametrize("renderer", [_render_timeseries_chart, _render_framing_chart])
+def test_chart_renderer_respects_explicit_label_limit(renderer):
+    if renderer is _render_timeseries_chart:
+        rows = [
+            {"group_label": f"Family-{index}", "bucket_start": "2026-07-01", "story_count": index}
+            for index in range(3, 0, -1)
+        ]
+    else:
+        rows = [
+            {"group_label": f"Family-{index}", "stance": "neutral", "story_count": index}
+            for index in range(3, 0, -1)
+        ]
+
+    svg = renderer(rows, limit=2)
+
+    assert "Family-3" in svg
+    assert "Family-2" in svg
+    assert "Family-1" not in svg
+
+
+def test_chart_renderer_output_is_deterministic():
+    rows = [
+        {"group_label": "OpenAI/GPT", "bucket_start": "2026-07-01", "story_count": 4},
+    ]
+
+    assert _render_timeseries_chart(rows) == _render_timeseries_chart(rows)
