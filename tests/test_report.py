@@ -1,4 +1,5 @@
 import json
+import sys
 
 import pandas as pd
 import pytest
@@ -10,7 +11,10 @@ from build_report import (
     _render_framing_chart,
     _render_lineup_chart,
     _render_timeseries_chart,
+    build_report,
     build_report_data,
+    main,
+    render_report,
 )
 from db import save_extraction
 from reference_data import import_catalog
@@ -37,6 +41,109 @@ def _import_catalog(conn, tmp_path):
         "aliases": ["GPT-5"],
     }]))
     import_catalog(conn, path)
+
+
+@pytest.fixture
+def sample_report():
+    return {
+        "metadata": {
+            "as_of": "2026-07-17T11:15:09Z",
+            "lookback_days": 180,
+            "bucket_days": 7,
+            "half_life_days": 30.0,
+        },
+        "summary": {
+            "stories": 1,
+            "catalog_models": 1,
+            "successful_extractions": 1,
+        },
+        "timeseries": [{
+            "group_label": "OpenAI/GPT",
+            "bucket_start": "2026-07-01",
+            "story_count": 4,
+        }],
+        "emerging": [],
+        "lineup": [],
+        "cooccurrence": [],
+        "framing": [],
+    }
+
+
+def test_render_report_contains_reader_sections_and_no_notebook_ui(sample_report):
+    html = render_report(sample_report)
+
+    assert "AI Pulse" in html
+    assert "핵심 요약" in html
+    assert "모델 담론 추이" in html
+    assert "기술 부록" in html
+    assert "Jupyter" not in html
+    assert "<svg" in html
+    assert "최근 180일" in html
+    assert "후보 경로 분모" in html
+    assert "추출 경로 분모" in html
+    assert "관측 불충분" in html
+
+
+def test_render_report_escapes_dynamic_text(sample_report):
+    sample_report["timeseries"][0]["group_label"] = "<script>alert(1)</script>"
+    sample_report["metadata"]["as_of"] = "<unsafe>"
+
+    html = render_report(sample_report)
+
+    assert "<unsafe>" not in html
+    assert "&lt;unsafe&gt;" in html
+    assert "<script>alert(1)</script>" not in html
+
+
+def test_build_report_writes_self_contained_html(temporary_db, tmp_path):
+    _insert_story(temporary_db)
+    _import_catalog(temporary_db, tmp_path)
+    output_path = tmp_path / "analysis_report.html"
+
+    build_report(str(tmp_path / "test.db"), str(output_path))
+
+    html = output_path.read_text(encoding="utf-8")
+    assert "AI Pulse" in html
+    assert "2026-07-14T10:00:00Z" in html
+    assert "해당 기준에서 관측된 결과 없음" in html
+
+
+def test_main_writes_report_for_valid_database(temporary_db, tmp_path, monkeypatch):
+    _insert_story(temporary_db)
+    output_path = tmp_path / "from_cli.html"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["build_report.py", "--db", str(tmp_path / "test.db"), "--output", str(output_path)],
+    )
+
+    main()
+
+    assert output_path.exists()
+
+
+def test_main_exits_nonzero_with_clear_error_for_missing_database(tmp_path, monkeypatch, capsys):
+    missing_db = tmp_path / "missing.db"
+    monkeypatch.setattr(sys, "argv", ["build_report.py", "--db", str(missing_db)])
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    assert "보고서 생성 실패" in capsys.readouterr().err
+    assert not missing_db.exists()
+
+
+def test_main_exits_nonzero_with_clear_error_for_database_without_stories(
+    temporary_db, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setattr(sys, "argv", ["build_report.py", "--db", str(tmp_path / "test.db")])
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    assert "stories가 없습니다" in capsys.readouterr().err
 
 
 def test_build_report_data_has_stable_shape(temporary_db, tmp_path):
