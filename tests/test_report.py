@@ -3,7 +3,15 @@ import json
 import pandas as pd
 import pytest
 
-from build_report import build_report_data
+from build_report import (
+    _render_chart,
+    _render_cooccurrence_chart,
+    _render_emerging_chart,
+    _render_framing_chart,
+    _render_lineup_chart,
+    _render_timeseries_chart,
+    build_report_data,
+)
 from db import save_extraction
 from reference_data import import_catalog
 
@@ -88,3 +96,49 @@ def test_build_report_data_preserves_windows_and_counts_latest_extractions(
         "catalog_models": 0,
         "successful_extractions": 1,
     }
+
+
+def test_chart_renderer_returns_inline_svg_for_timeseries():
+    svg = _render_timeseries_chart([
+        {"group_label": "OpenAI/GPT", "bucket_start": "2026-07-01", "story_count": 4},
+    ])
+
+    assert svg.lstrip().startswith("<svg")
+    assert "OpenAI/GPT" in svg
+
+
+@pytest.mark.parametrize(
+    ("renderer", "rows"),
+    [
+        (_render_emerging_chart, [{"group_label": "OpenAI/GPT", "mention_delta": 3}]),
+        (_render_lineup_chart, [{"vendor": "OpenAI", "family": "GPT", "version": "5", "weighted_count": 2.5}]),
+        (_render_cooccurrence_chart, [{"family_a": "GPT", "family_b": "Claude", "story_count": 2}]),
+        (_render_framing_chart, [{"group_label": "OpenAI/GPT", "stance": "positive", "story_count": 2}]),
+    ],
+)
+def test_chart_renderers_return_inline_svg(renderer, rows):
+    svg = renderer(rows)
+
+    assert svg.lstrip().startswith("<svg")
+
+
+@pytest.mark.parametrize(
+    "renderer",
+    [
+        _render_timeseries_chart,
+        _render_emerging_chart,
+        _render_lineup_chart,
+        _render_cooccurrence_chart,
+        _render_framing_chart,
+    ],
+)
+def test_chart_renderers_return_korean_empty_state(renderer):
+    html = renderer([])
+
+    assert "관측된 결과 없음" in html
+
+
+def test_render_chart_dispatches_report_key():
+    svg = _render_chart("emerging", [{"group_label": "OpenAI/GPT", "mention_delta": 1}])
+
+    assert svg.lstrip().startswith("<svg")

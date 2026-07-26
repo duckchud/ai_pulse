@@ -1,7 +1,13 @@
-"""Build the stable data contract consumed by the refined analysis report."""
+"""Build report data and render its focused chart fragments."""
 
+import io
 import sqlite3
 
+import matplotlib
+
+matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt
 import pandas as pd
 
 from analysis import (
@@ -12,6 +18,16 @@ from analysis import (
     model_framing_sentiment,
 )
 from db import latest_successful_extractions
+
+
+_EMPTY_CHART = '<p class="chart-empty">해당 기준에서 관측된 결과 없음</p>'
+_CHART_RENDERERS = {
+    "timeseries": lambda rows: _render_timeseries_chart(rows),
+    "emerging": lambda rows: _render_emerging_chart(rows),
+    "lineup": lambda rows: _render_lineup_chart(rows),
+    "cooccurrence": lambda rows: _render_cooccurrence_chart(rows),
+    "framing": lambda rows: _render_framing_chart(rows),
+}
 
 
 def _as_of(conn: sqlite3.Connection) -> str:
@@ -71,3 +87,154 @@ def build_report_data(
         "cooccurrence": _frame_records(cooccurrence, top_n),
         "framing": _frame_records(framing, top_n * 4),
     }
+
+
+def _empty_chart() -> str:
+    return _EMPTY_CHART
+
+
+def _svg_from_figure(fig) -> str:
+    """Serialize a figure as standalone inline SVG without an XML preamble."""
+    buffer = io.BytesIO()
+    with matplotlib.rc_context({"svg.fonttype": "none"}):
+        fig.savefig(buffer, format="svg", bbox_inches="tight")
+    plt.close(fig)
+    svg = buffer.getvalue().decode("utf-8")
+    return svg[svg.find("<svg") :]
+
+
+def _figure(height: float = 3.8):
+    return plt.subplots(figsize=(9.5, height), constrained_layout=True)
+
+
+def _render_timeseries_chart(rows: list[dict]) -> str:
+    """Return inline SVG or the Korean empty-state HTML."""
+    if not rows:
+        return _empty_chart()
+
+    frame = pd.DataFrame(rows)
+    labels = sorted(frame["bucket_start"].astype(str).unique())
+    groups = list(dict.fromkeys(frame["group_label"].astype(str)))[:10]
+    fig, ax = _figure(max(3.8, 2.6 + len(groups) * 0.12))
+    x = range(len(labels))
+    for group in groups:
+        group_frame = frame[frame["group_label"].astype(str) == group].copy()
+        values = group_frame.assign(
+            bucket_start=group_frame["bucket_start"].astype(str)
+        ).set_index("bucket_start")["story_count"].reindex(labels, fill_value=0)
+        ax.plot(x, values.tolist(), marker="o", linewidth=1.8, label=group)
+    ax.set_xticks(list(x), labels, rotation=35, ha="right")
+    ax.set_ylabel("Stories")
+    ax.set_ylim(bottom=0)
+    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1), frameon=False)
+    return _svg_from_figure(fig)
+
+
+def _render_horizontal_bars(labels, values, xlabel: str) -> str:
+    fig, ax = _figure(max(3.2, 1.4 + len(labels) * 0.42))
+    positions = list(range(len(labels)))
+    ax.barh(positions, values, color="#386cb0")
+    ax.set_yticks(positions, labels)
+    ax.set_xlabel(xlabel)
+    ax.invert_yaxis()
+    if min(values, default=0) >= 0:
+        ax.set_xlim(left=0)
+    return _svg_from_figure(fig)
+
+
+def _render_emerging_chart(rows: list[dict]) -> str:
+    """Return inline SVG or the Korean empty-state HTML."""
+    if not rows:
+        return _empty_chart()
+    frame = pd.DataFrame(rows).head(10)
+    return _render_horizontal_bars(
+        frame["group_label"].astype(str).tolist(),
+        frame["mention_delta"].astype(float).tolist(),
+        "Story delta",
+    )
+
+
+def _render_lineup_chart(rows: list[dict]) -> str:
+    """Return inline SVG or the Korean empty-state HTML."""
+    if not rows:
+        return _empty_chart()
+    frame = pd.DataFrame(rows).head(10).copy()
+    frame["label"] = frame.apply(
+        lambda row: "/".join(
+            str(value)
+            for value in (row.get("vendor"), row.get("family"), row.get("version"))
+            if pd.notna(value) and value not in (None, "")
+        ),
+        axis=1,
+    )
+    return _render_horizontal_bars(
+        frame["label"].tolist(),
+        frame["weighted_count"].astype(float).tolist(),
+        "Weighted stories",
+    )
+
+
+def _render_cooccurrence_chart(rows: list[dict]) -> str:
+    """Return inline SVG or the Korean empty-state HTML."""
+    if not rows:
+        return _empty_chart()
+    frame = pd.DataFrame(rows).head(10).copy()
+    frame["label"] = frame.apply(
+        lambda row: " + ".join(
+            "/".join(
+                str(value)
+                for value in (
+                    row.get(f"vendor_{suffix}"),
+                    row.get(f"family_{suffix}"),
+                    row.get(f"version_{suffix}"),
+                )
+                if pd.notna(value) and value not in (None, "")
+            )
+            for suffix in ("a", "b")
+        ),
+        axis=1,
+    )
+    return _render_horizontal_bars(
+        frame["label"].tolist(), frame["story_count"].astype(float).tolist(), "Shared stories"
+    )
+
+
+def _render_framing_chart(rows: list[dict]) -> str:
+    """Return inline SVG or the Korean empty-state HTML."""
+    if not rows:
+        return _empty_chart()
+    frame = pd.DataFrame(rows).copy()
+    totals = frame.groupby("group_label")["story_count"].sum().sort_values(ascending=False)
+    groups = totals.head(10).index.tolist()
+    stances = list(dict.fromkeys(frame["stance"].astype(str)))
+    fig, ax = _figure(max(3.8, 2.6 + len(groups) * 0.34))
+    positions = list(range(len(groups)))
+    left = [0.0] * len(groups)
+    colors = ["#386cb0", "#f28e2b", "#59a14f", "#b07aa1", "#79706e"]
+    for index, stance in enumerate(stances):
+        values = [
+            float(
+                frame[
+                    (frame["group_label"] == group)
+                    & (frame["stance"].astype(str) == stance)
+                ]["story_count"].sum()
+            )
+            for group in groups
+        ]
+        ax.barh(positions, values, left=left, label=stance, color=colors[index % len(colors)])
+        left = [current + value for current, value in zip(left, values)]
+    ax.set_yticks(positions, groups)
+    ax.set_xlabel("Stories")
+    ax.set_xlim(left=0)
+    ax.invert_yaxis()
+    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1), frameon=False)
+    return _svg_from_figure(fig)
+
+
+def _render_chart(report_key: str, rows: list[dict]) -> str:
+    """Render a report section's chart from the stable report-data key."""
+    try:
+        renderer = _CHART_RENDERERS[report_key]
+    except KeyError as exc:
+        raise ValueError(f"unknown report chart key: {report_key!r}") from exc
+    return renderer(rows)
