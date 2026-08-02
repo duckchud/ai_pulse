@@ -28,6 +28,15 @@
     return String(value);
   }
 
+  function bucketLabel(value) {
+    var timestamp = number(value);
+    if (timestamp === null || timestamp < 1000000000) {
+      return text(value);
+    }
+    var date = new Date(timestamp * 1000);
+    return Number.isNaN(date.getTime()) ? text(value) : date.toISOString().slice(0, 10);
+  }
+
   function modelLabel(row, suffix) {
     var fields = suffix ? ["vendor_" + suffix, "family_" + suffix, "version_" + suffix] : ["vendor", "family", "version"];
     var parts = fields.map(function (field) { return row[field]; }).filter(function (value) {
@@ -81,7 +90,11 @@
       return;
     }
     try {
-      window.Plotly.newPlot(element, traces, baseLayout(options), PLOTLY_CONFIG);
+      Promise.resolve(
+        window.Plotly.newPlot(element, traces, baseLayout(options), PLOTLY_CONFIG)
+      ).catch(function () {
+        renderErrorState(element);
+      });
     } catch (error) {
       renderErrorState(element);
     }
@@ -89,30 +102,34 @@
 
   function renderTimeseries(rows, element, options) {
     var grouped = {};
+    var buckets = {};
     validRows(rows).forEach(function (row) {
       var bucket = row.bucket_start;
       var count = number(row.story_count);
-      var label = text(row.group_label);
+      var bucketText = bucketLabel(bucket);
+      var label = text(row.group_label || row.family);
       if (bucket === null || bucket === undefined || bucket === "" || count === null) {
         return;
       }
-      (grouped[label] = grouped[label] || []).push({ bucket: bucket, count: count });
+      grouped[label] = grouped[label] || {};
+      grouped[label][bucketText] = count;
+      buckets[bucketText] = true;
     });
     var labels = Object.keys(grouped).sort();
+    var bucketLabels = Object.keys(buckets).sort();
     if (!labels.length) {
       renderEmptyState(element);
       return;
     }
     var traces = labels.map(function (label, index) {
-      var points = grouped[label].sort(function (left, right) {
-        return String(left.bucket).localeCompare(String(right.bucket));
-      });
       return {
         type: "scatter",
         mode: "lines+markers",
         name: label,
-        x: points.map(function (point) { return point.bucket; }),
-        y: points.map(function (point) { return point.count; }),
+        x: bucketLabels,
+        y: bucketLabels.map(function (bucket) {
+          return Object.prototype.hasOwnProperty.call(grouped[label], bucket) ? grouped[label][bucket] : 0;
+        }),
         line: { color: COLORS[index % COLORS.length] },
         hovertemplate: "%{x}<br>고유 story: %{y}<extra>" + label + "</extra>",
       };
@@ -205,22 +222,36 @@
   }
 
   function renderFraming(rows, element, options) {
-    var totals = {};
-    var stances = {};
+    var cells = {};
+    var labels = [];
+    var stanceLabels = [];
     validRows(rows).forEach(function (row) {
+      if (!cells) {
+        return;
+      }
       var label = text(row.group_label);
       var stance = text(row.stance);
       var count = number(row.story_count);
       if (label === "-" || stance === "-" || count === null) {
         return;
       }
-      totals[label] = (totals[label] || 0) + count;
-      stances[stance] = true;
+      var key = label + "\u0000" + stance;
+      if (Object.prototype.hasOwnProperty.call(cells, key)) {
+        renderErrorState(element);
+        cells = null;
+        return;
+      }
+      cells[key] = count;
+      if (labels.indexOf(label) === -1) {
+        labels.push(label);
+      }
+      if (stanceLabels.indexOf(stance) === -1) {
+        stanceLabels.push(stance);
+      }
     });
-    var labels = Object.keys(totals).sort(function (left, right) {
-      return totals[right] - totals[left] || left.localeCompare(right);
-    });
-    var stanceLabels = Object.keys(stances).sort();
+    if (!cells) {
+      return;
+    }
     if (!labels.length || !stanceLabels.length) {
       renderEmptyState(element);
       return;
@@ -231,11 +262,7 @@
         orientation: "h",
         name: stance,
         y: labels.slice().reverse(),
-        x: labels.map(function (label) {
-          return validRows(rows).filter(function (row) {
-            return text(row.group_label) === label && text(row.stance) === stance;
-          }).reduce(function (sum, row) { return sum + (number(row.story_count) || 0); }, 0);
-        }).reverse(),
+        x: labels.map(function (label) { return cells[label + "\u0000" + stance] || 0; }).reverse(),
         marker: { color: COLORS[index % COLORS.length] },
         hovertemplate: "%{y}<br>" + stance + ": %{x}<extra></extra>",
       };

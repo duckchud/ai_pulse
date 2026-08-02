@@ -1,5 +1,6 @@
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -24,6 +25,7 @@ from reference_data import import_catalog
 
 
 _REAL_LOAD_PLOTLY_BUNDLE = report_module._load_plotly_bundle
+_DASHBOARD_SOURCE = Path(report_module.__file__).with_name("report_dashboard.js")
 
 
 @pytest.fixture(autouse=True)
@@ -34,6 +36,51 @@ def stub_plotly_bundle(monkeypatch):
         "_load_plotly_bundle",
         lambda: "/* plotly-2.35.2: Plotly.newPlot test marker */",
     )
+
+
+def _run_dashboard(report, reject_plotly=False):
+    harness = """
+const fs = require("fs");
+const source = fs.readFileSync(process.argv[1], "utf8");
+const report = JSON.parse(process.argv[2]);
+const rejectPlotly = process.argv[3] === "1";
+const calls = [];
+const elements = {};
+function element(id) {
+  return elements[id] || (elements[id] = {
+    id,
+    children: [],
+    textContent: "",
+    replaceChildren() { this.children = []; this.textContent = ""; },
+    appendChild(child) { this.children.push(child); this.textContent = child.textContent || ""; },
+  });
+}
+global.window = {
+  Plotly: {
+    newPlot(target, traces, layout, config) {
+      calls.push({ id: target.id, traces, layout, config });
+      return rejectPlotly ? Promise.reject(new Error("plot failed")) : Promise.resolve();
+    },
+  },
+};
+global.document = {
+  readyState: "complete",
+  getElementById(id) {
+    return id === "report-data" ? { textContent: JSON.stringify(report) } : element(id);
+  },
+  createElement() { return { className: "", textContent: "" }; },
+  addEventListener() {},
+};
+eval(source);
+setTimeout(() => process.stdout.write(JSON.stringify({ calls, elements })), 0);
+"""
+    result = subprocess.run(
+        ["node", "-e", harness, str(_DASHBOARD_SOURCE), json.dumps(report), "1" if reject_plotly else "0"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(result.stdout)
 
 
 def _insert_story(conn, story_id="story-1", created_at="2026-07-14T10:00:00Z"):
@@ -268,6 +315,58 @@ def test_render_report_chart_containers_are_not_inside_legacy_chart_grid(sample_
     ):
         assert f'id="{chart_id}"' in html
     assert "chart-grid" not in html
+
+
+def test_render_report_has_timeseries_and_emerging_companion_tables(sample_report):
+    sample_report["emerging"] = [{"group_label": "OpenAI/GPT", "mention_delta": 3}]
+
+    html = render_report(sample_report)
+
+    assert 'id="table-timeseries"' in html
+    assert 'id="table-emerging"' in html
+    assert "bucket" in html
+    assert "언급 증감" in html
+
+
+def test_browser_timeseries_formats_numeric_buckets_and_fills_sparse_series():
+    result = _run_dashboard({
+        "timeseries": [
+            {"group_label": "OpenAI/GPT", "bucket_start": 1784023200, "story_count": 4},
+            {"group_label": "Anthropic/Claude", "bucket_start": 1784628000, "story_count": 2},
+        ],
+        "emerging": [], "lineup": [], "cooccurrence": [], "framing": [],
+    })
+
+    timeseries_calls = [call for call in result["calls"] if call["id"] == "chart-timeseries"]
+    traces = {trace["name"]: trace for trace in timeseries_calls[0]["traces"]}
+    assert traces["OpenAI/GPT"]["x"] == ["2026-07-14", "2026-07-21"]
+    assert traces["OpenAI/GPT"]["y"] == [4, 0]
+    assert traces["Anthropic/Claude"]["x"] == ["2026-07-14", "2026-07-21"]
+    assert traces["Anthropic/Claude"]["y"] == [0, 2]
+
+
+def test_browser_framing_uses_gold_cells_without_recomputing_totals():
+    result = _run_dashboard({
+        "timeseries": [], "emerging": [], "lineup": [], "cooccurrence": [],
+        "framing": [
+            {"group_label": "OpenAI/GPT", "stance": "positive", "story_count": 2},
+            {"group_label": "OpenAI/GPT", "stance": "skeptical", "story_count": 3},
+        ],
+    })
+
+    framing = [call for call in result["calls"] if call["id"] == "chart-framing"][0]
+    assert [trace["x"] for trace in framing["traces"]] == [[2], [3]]
+
+
+def test_browser_plotly_rejection_renders_local_error_state():
+    result = _run_dashboard({
+        "timeseries": [{"group_label": "OpenAI/GPT", "bucket_start": 1784023200, "story_count": 4}],
+        "emerging": [], "lineup": [], "cooccurrence": [], "framing": [],
+    }, reject_plotly=True)
+
+    assert result["elements"]["chart-timeseries"]["textContent"] == (
+        "차트를 표시할 수 없습니다. 아래 표를 확인하세요."
+    )
 
 
 def test_build_report_data_records_latest_extraction_time(temporary_db, tmp_path):

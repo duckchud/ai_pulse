@@ -431,17 +431,43 @@ def _metadata_values(metadata: dict, key: str, fallback: str) -> str:
     return ", ".join(_text(value) for value in values)
 
 
-def _report_table(headers: list[str], rows: list[list[str]]) -> str:
+def _report_table(headers: list[str], rows: list[list[str]], table_id: str | None = None) -> str:
     header_cells = "".join(f"<th scope=\"col\">{html.escape(label)}</th>" for label in headers)
     if not rows:
         return '<p class="table-empty">세부 표에 표시할 관측값이 없습니다.</p>'
+    table_id_attr = f' id="{html.escape(table_id)}"' if table_id else ""
     body = "".join(
         "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>"
         for row in rows
     )
     return (
-        '<div class="table-scroll"><table><thead><tr>'
+        f'<div class="table-scroll"><table{table_id_attr}><thead><tr>'
         f"{header_cells}</tr></thead><tbody>{body}</tbody></table></div>"
+    )
+
+
+def _timeseries_table(rows: list[dict]) -> str:
+    return _report_table(
+        ["모델 family", "bucket 시작(UTC)", "고유 story"],
+        [[
+            _text(row.get("group_label")),
+            _text(_bucket_label(row.get("bucket_start"))),
+            _number(row.get("story_count")),
+        ] for row in rows],
+        table_id="table-timeseries",
+    )
+
+
+def _emerging_table(rows: list[dict]) -> str:
+    return _report_table(
+        ["모델 family", "최근 story", "직전 story", "언급 증감"],
+        [[
+            _text(row.get("group_label")),
+            _number(row.get("recent_story_count")),
+            _number(row.get("previous_story_count")),
+            _number(row.get("mention_delta")),
+        ] for row in rows],
+        table_id="table-emerging",
     )
 
 
@@ -455,6 +481,7 @@ def _lineup_table(rows: list[dict]) -> str:
             _number(row.get("story_count")),
             _decimal(row.get("weighted_count")),
         ] for row in rows],
+        table_id="table-lineup",
     )
 
 
@@ -466,6 +493,7 @@ def _cooccurrence_table(rows: list[dict]) -> str:
             _text(row.get("family_b")),
             _number(row.get("story_count")),
         ] for row in rows],
+        table_id="table-cooccurrence",
     )
 
 
@@ -477,6 +505,7 @@ def _framing_table(rows: list[dict]) -> str:
             _text(row.get("stance")),
             _number(row.get("story_count")),
         ] for row in rows],
+        table_id="table-framing",
     )
 
 
@@ -659,6 +688,8 @@ code {{ background: #edf2f7; padding: 1px 4px; }}
     <p>주간 추이는 지속적인 언급 흐름을, 24시간 증감은 일시적 spike를 보여줍니다. 참여도는 이 보고서의 순위 근거가 아닙니다.</p>
     {trend_chart}
     {emerging_chart}
+    {_timeseries_table(timeseries)}
+    {_emerging_table(emerging)}
     <p class="denominator">후보 경로 분모: 현재 catalog alias로 매칭된 수집 story입니다. 최근 {lookback_days}일 결과는 이 분모에 한정됩니다.</p>
   </section>
   <section aria-labelledby="lineup-heading">
