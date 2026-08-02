@@ -422,16 +422,39 @@ def test_browser_framing_uses_gold_cells_without_recomputing_totals():
     assert [trace["x"] for trace in framing["traces"]] == [[2], [3]]
 
 
-def test_browser_skips_null_metric_rows():
+def test_browser_skips_non_numeric_metric_rows():
     result = _run_dashboard({
         "timeseries": [], "emerging": [], "cooccurrence": [], "framing": [],
-        "lineup": [{
-            "vendor": "OpenAI",
-            "family": "GPT",
-            "version": "5",
-            "weighted_count": None,
-            "story_count": 4,
-        }],
+        "lineup": [
+            {
+                "vendor": "OpenAI",
+                "family": "GPT",
+                "version": "5",
+                "weighted_count": None,
+                "story_count": 4,
+            },
+            {
+                "vendor": "Array",
+                "family": "Metric",
+                "version": "1",
+                "weighted_count": [],
+                "story_count": 4,
+            },
+            {
+                "vendor": "Boolean",
+                "family": "Metric",
+                "version": "1",
+                "weighted_count": True,
+                "story_count": 4,
+            },
+            {
+                "vendor": "String",
+                "family": "Metric",
+                "version": "1",
+                "weighted_count": "9",
+                "story_count": 4,
+            },
+        ],
     })
 
     assert not [call for call in result["calls"] if call["id"] == "chart-lineup"]

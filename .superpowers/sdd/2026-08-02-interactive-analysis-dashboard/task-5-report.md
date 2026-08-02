@@ -47,3 +47,12 @@ and static DOM/CSS checks are the strongest available local substitute.
 
 The generated artifact is committed with the implementation, regression tests,
 and this QA record. No push was performed.
+
+## Numeric Validation Follow-up
+
+- `report_dashboard.js` now accepts chart metrics only when they are primitive,
+  finite JavaScript numbers.
+- The Node dashboard contract verifies that null, array, boolean, and numeric
+  string lineup metrics are skipped and render the local empty state.
+- `pytest -q`: 155 passed, with 12 existing pandas `FutureWarning` messages.
+- `node --check report_dashboard.js`: passed.
