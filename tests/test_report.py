@@ -125,6 +125,7 @@ def sample_report():
     return {
         "metadata": {
             "as_of": "2026-07-17T11:15:09Z",
+            "extraction_as_of": "2026-07-14T10:02:00Z",
             "lookback_days": 180,
             "bucket_days": 7,
             "half_life_days": 30.0,
@@ -159,6 +160,43 @@ def test_render_report_contains_reader_sections_and_no_notebook_ui(sample_report
     assert "후보 경로 분모" in html
     assert "추출 경로 분모" in html
     assert "관측 불충분" in html
+
+
+def test_render_report_separates_stale_extraction_freshness(sample_report):
+    sample_report["framing"] = [{
+        "group_label": "OpenAI/GPT",
+        "stance": "positive",
+        "story_count": 2,
+    }]
+
+    html = render_report(sample_report)
+
+    assert "수집/후보 기준 시각" in html
+    assert "추출 기준 시각" in html
+    assert "이전 extraction 기반 참고 분석" in html
+
+
+def test_build_report_data_records_latest_extraction_time(temporary_db, tmp_path):
+    _insert_story(temporary_db)
+    _import_catalog(temporary_db, tmp_path)
+    payload = {"relevant": True, "observations": [], "extensions": {}}
+    save_extraction(temporary_db, {
+        "story_id": "story-1",
+        "prompt_version": "schema-free-v2",
+        "model": "test",
+        "status": "succeeded",
+        "raw_response": json.dumps(payload),
+        "parsed_json": json.dumps(payload),
+        "input_hash": "freshness-test",
+        "input_char_count": 1,
+        "input_truncated": 0,
+        "error_message": None,
+        "enriched_at": "2026-07-14T10:02:00Z",
+    })
+
+    report = build_report_data(temporary_db)
+
+    assert report["metadata"]["extraction_as_of"] == "2026-07-14T10:02:00Z"
 
 
 def test_render_report_escapes_dynamic_text(sample_report):

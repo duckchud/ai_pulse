@@ -101,6 +101,28 @@ def _distinct_values(conn: sqlite3.Connection, query: str) -> list[str]:
     return [str(row[0]) for row in conn.execute(query) if row[0] is not None]
 
 
+def _latest_extraction_as_of(conn: sqlite3.Connection) -> str | None:
+    row = conn.execute(
+        "SELECT MAX(enriched_at) FROM story_extractions WHERE status = 'succeeded'"
+    ).fetchone()
+    return row[0] if row and row[0] is not None else None
+
+
+def _is_extraction_stale(metadata: dict) -> bool:
+    as_of = metadata.get("as_of")
+    extraction_as_of = metadata.get("extraction_as_of")
+    if not as_of or not extraction_as_of:
+        return bool(as_of and not extraction_as_of)
+    try:
+        as_of_dt = datetime.fromisoformat(str(as_of).replace("Z", "+00:00"))
+        extraction_dt = datetime.fromisoformat(
+            str(extraction_as_of).replace("Z", "+00:00")
+        )
+    except ValueError:
+        return True
+    return extraction_dt < as_of_dt
+
+
 def build_report_data(
     conn: sqlite3.Connection,
     lookback_days: int = 180,
@@ -130,6 +152,7 @@ def build_report_data(
     return {
         "metadata": {
             "as_of": as_of,
+            "extraction_as_of": _latest_extraction_as_of(conn),
             "lookback_days": lookback_days,
             "bucket_days": 7,
             "half_life_days": 30.0,
@@ -483,7 +506,7 @@ def _summary_observations(report: dict) -> list[str]:
             f"{_number(leading.get('story_count'))}번 나타났습니다."
         )
     framing = report.get("framing", [])
-    if framing:
+    if framing and not _is_extraction_stale(report.get("metadata", {})):
         leading = framing[0]
         observations.append(
             f"evidence-verified 추출 표본에서 {_text(leading.get('group_label'))}의 "
@@ -512,6 +535,8 @@ def render_report(report: dict) -> str:
     bucket_days = _number(metadata.get("bucket_days"))
     half_life_days = _decimal(metadata.get("half_life_days"))
     as_of = _text(metadata.get("as_of"), "기록 없음")
+    extraction_as_of = _text(metadata.get("extraction_as_of"), "기록 없음")
+    extraction_stale = _is_extraction_stale(metadata)
     timeseries = report.get("timeseries", [])
     emerging = report.get("emerging", [])
     lineup = report.get("lineup", [])
@@ -544,6 +569,12 @@ def render_report(report: dict) -> str:
         _render_chart("framing", framing, limit=10),
         f"최근 {lookback_days}일 evidence-verified extraction의 family별 stance 분포.",
     )
+    framing_freshness = (
+        '<p class="freshness-warning">추출 기준 시각이 최신 story보다 이전입니다. '
+        "이 framing은 이전 extraction 기반 참고 분석이며, 오늘 수집된 story의 stance를 포함하지 않습니다.</p>"
+        if extraction_stale
+        else '<p class="freshness-note">추출 기준 시각이 최신 story 기준과 일치합니다.</p>'
+    )
 
     return f"""<!doctype html>
 <html lang="ko">
@@ -572,6 +603,8 @@ figcaption {{ margin-top: 6px; }} .chart-empty, .table-empty {{ padding: 18px; b
 th, td {{ border: 1px solid #d8dde3; padding: 9px 10px; text-align: left; vertical-align: top; white-space: nowrap; }}
 th {{ background: #edf2f7; color: #1f2937; }}
 .limitations {{ background: #fff7ed; border-left: 4px solid #ea580c; padding: 18px; }}
+.freshness-warning {{ background: #fff7ed; border-left: 4px solid #ea580c; padding: 12px 14px; }}
+.freshness-note {{ color: #166534; }}
 .limitations ul, .summary-list {{ margin: 0; padding-left: 20px; }}
 details {{ background: #fff; border: 1px solid #d8dde3; padding: 14px; }} summary {{ cursor: pointer; font-weight: 700; }}
 code {{ background: #edf2f7; padding: 1px 4px; }}
@@ -583,7 +616,7 @@ code {{ background: #edf2f7; padding: 1px 4px; }}
   <header>
     <h1>AI Pulse</h1>
     <p class="subtitle">Hacker News의 AI 모델 담론을 후보 매칭과 검증 추출로 분리해 읽는 정제 분석 보고서</p>
-    <p class="meta">기준 시각(UTC): {as_of} | 분석 기간: 최근 {lookback_days}일 | 범위: 수집된 Hacker News story의 모델 담론</p>
+    <p class="meta">수집/후보 기준 시각(UTC): {as_of}<br>추출 기준 시각(UTC): {extraction_as_of}<br>분석 기간: 최근 {lookback_days}일 | 범위: 수집된 Hacker News story의 모델 담론</p>
     <dl class="kpis">
       <div><dt>수집 story</dt><dd>{_number(summary.get('stories'))}</dd></div>
       <div><dt>모델 catalog</dt><dd>{_number(summary.get('catalog_models'))}</dd></div>
@@ -615,8 +648,9 @@ code {{ background: #edf2f7; padding: 1px 4px; }}
     <p class="denominator">후보 경로 분모: 최근 {lookback_days}일의 resolved candidate story이며, story별 pair는 한 번만 계산합니다.</p>
   </section>
   <section aria-labelledby="framing-heading">
-    <h2 id="framing-heading">Story framing: 검증된 추출 표본에서의 stance 분포</h2>
+    <h2 id="framing-heading">Story framing: extraction freshness를 확인한 참고 분석</h2>
     <p>stance는 story가 모델을 어떻게 framing했는지를 나타내는 open-world label입니다. 빈 label과 unresolved label은 임의로 합치지 않습니다.</p>
+    {framing_freshness}
     {framing_chart}
     {_framing_table(framing)}
     <p class="denominator">추출 경로 분모: 최신 성공 extraction 중 evidence-verified observation입니다. 전체 수집 story 수와 같지 않습니다.</p>
