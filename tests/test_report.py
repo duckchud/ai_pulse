@@ -329,6 +329,23 @@ def test_render_report_has_timeseries_and_emerging_companion_tables(sample_repor
 
     assert 'id="table-timeseries"' in html
     assert 'id="table-emerging"' in html
+
+
+def test_emerging_table_prioritizes_difference_over_raw_counts(sample_report):
+    sample_report["emerging"] = [{
+        "group_label": "OpenAI/GPT",
+        "recent_story_count": 9,
+        "previous_story_count": 14,
+        "mention_delta": -5,
+    }]
+
+    html = render_report(sample_report)
+    table = html.split('id="table-emerging"', 1)[1].split("</table>", 1)[0]
+
+    assert "고유 story 차이" in html
+    assert "최근 story" not in table
+    assert "직전 story" not in table
+    assert "-5" in table
     assert "bucket" in html
     assert "언급 증감" in html
 

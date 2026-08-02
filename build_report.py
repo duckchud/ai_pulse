@@ -505,11 +505,9 @@ def _timeseries_table(rows: list[dict]) -> str:
 
 def _emerging_table(rows: list[dict]) -> str:
     return _report_table(
-        ["모델 family", "최근 story", "직전 story", "언급 증감"],
+        ["모델 family", "고유 story 차이"],
         [[
             _text(row.get("group_label")),
-            _number(row.get("recent_story_count")),
-            _number(row.get("previous_story_count")),
             _number(row.get("mention_delta")),
         ] for row in rows],
         table_id="table-emerging",
@@ -747,6 +745,7 @@ code {{ background: #edf2f7; padding: 1px 4px; }}
   <section aria-labelledby="trend-heading">
     <h2 id="trend-heading">모델 담론 추이: 지속 변화와 단기 증가를 분리해 확인</h2>
     <p>주간 추이는 지속적인 언급 흐름을, 24시간 증감은 일시적 spike를 보여줍니다. 참여도는 이 보고서의 순위 근거가 아닙니다.</p>
+    <p class="muted">24시간 표는 모델 family별 <strong>최근 24시간 후보 story 수 - 직전 24시간 후보 story 수</strong>만 표시합니다. 양수는 증가, 음수는 감소이며, 한 story가 여러 family를 언급하면 family별로 각각 집계됩니다.</p>
     {trend_chart}
     {emerging_chart}
     {_timeseries_table(timeseries)}
