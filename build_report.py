@@ -6,6 +6,7 @@ import io
 import json
 import re
 import sqlite3
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -431,6 +432,13 @@ def _metadata_values(metadata: dict, key: str, fallback: str) -> str:
     return ", ".join(_text(value) for value in values)
 
 
+def _section_rows(value: object) -> list[dict]:
+    """Keep only mapping rows from an untrusted report section."""
+    if not isinstance(value, list):
+        return []
+    return [dict(row) for row in value if isinstance(row, Mapping)]
+
+
 def _report_table(headers: list[str], rows: list[list[str]], table_id: str | None = None) -> str:
     header_cells = "".join(f"<th scope=\"col\">{html.escape(label)}</th>" for label in headers)
     table_id_attr = f' id="{html.escape(table_id)}"' if table_id else ""
@@ -584,6 +592,9 @@ def _chart_container(
 
 def render_report(report: dict) -> str:
     """Render report data and an interactive chart shell as standalone HTML."""
+    report = dict(report)
+    for section in ("timeseries", "emerging", "lineup", "cooccurrence", "framing"):
+        report[section] = _section_rows(report.get(section))
     metadata = report.get("metadata", {})
     summary = report.get("summary", {})
     lookback_days = _number(metadata.get("lookback_days"))

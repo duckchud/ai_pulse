@@ -372,6 +372,26 @@ def test_empty_report_keeps_accessible_chart_fallbacks_tables_and_stale_warning(
     assert not re.search(r'\b(?:src|href)=["\']https?://', html, flags=re.I)
 
 
+def test_render_report_drops_malformed_section_values_and_keeps_fallbacks(sample_report):
+    sample_report.update({
+        "timeseries": None,
+        "emerging": "invalid",
+        "lineup": [None, "invalid"],
+        "cooccurrence": [{"family_a": "GPT", "family_b": "Claude", "story_count": 2}, None],
+        "framing": [None],
+    })
+
+    html = render_report(sample_report)
+
+    for chart_key in ("timeseries", "emerging", "lineup", "cooccurrence", "framing"):
+        assert f'id="chart-{chart_key}"' in html
+        assert f'id="table-{chart_key}"' in html
+    assert html.count("해당 기준에서 관측된 결과 없음") >= 5
+    assert "이전 extraction 기반 참고 분석" in html
+    assert "GPT" in html
+    assert "Claude" in html
+
+
 def test_browser_timeseries_formats_numeric_buckets_and_fills_sparse_series():
     result = _run_dashboard({
         "timeseries": [
