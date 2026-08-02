@@ -333,6 +333,45 @@ def test_render_report_has_timeseries_and_emerging_companion_tables(sample_repor
     assert "언급 증감" in html
 
 
+def test_empty_report_keeps_accessible_chart_fallbacks_tables_and_stale_warning(sample_report):
+    sample_report.update({
+        "timeseries": [],
+        "emerging": [],
+        "lineup": [],
+        "cooccurrence": [],
+        "framing": [],
+    })
+
+    html = render_report(sample_report)
+
+    chart_labels = {
+        "timeseries": "모델 family별 주간 고유 story 추이 차트",
+        "emerging": "모델 family별 24시간 언급 증감 차트",
+        "lineup": "모델별 최신성 가중 story 라인업 차트",
+        "cooccurrence": "함께 언급된 모델 family 조합 차트",
+        "framing": "모델 family별 story framing 차트",
+    }
+    table_headers = {
+        "timeseries": "bucket 시작(UTC)",
+        "emerging": "언급 증감",
+        "lineup": "최신성 가중치",
+        "cooccurrence": "함께 언급된 story",
+        "framing": "stance 원문 label",
+    }
+    for chart_key, label in chart_labels.items():
+        assert (
+            f'id="chart-{chart_key}" class="chart-target" role="img" '
+            f'aria-label="{label}" aria-describedby="table-{chart_key}"'
+        ) in html
+        assert f'id="table-{chart_key}"' in html
+        assert table_headers[chart_key] in html
+
+    assert html.count("해당 기준에서 관측된 결과 없음") >= 5
+    assert "이전 extraction 기반 참고 분석" in html
+    assert ".modebar { display: none !important; }" in html
+    assert not re.search(r'\b(?:src|href)=["\']https?://', html, flags=re.I)
+
+
 def test_browser_timeseries_formats_numeric_buckets_and_fills_sparse_series():
     result = _run_dashboard({
         "timeseries": [

@@ -433,15 +433,18 @@ def _metadata_values(metadata: dict, key: str, fallback: str) -> str:
 
 def _report_table(headers: list[str], rows: list[list[str]], table_id: str | None = None) -> str:
     header_cells = "".join(f"<th scope=\"col\">{html.escape(label)}</th>" for label in headers)
-    if not rows:
-        return '<p class="table-empty">세부 표에 표시할 관측값이 없습니다.</p>'
     table_id_attr = f' id="{html.escape(table_id)}"' if table_id else ""
     body = "".join(
         "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>"
         for row in rows
     )
+    empty_state = (
+        '<p class="table-empty">세부 표에 표시할 관측값이 없습니다.</p>'
+        if not rows
+        else ""
+    )
     return (
-        f'<div class="table-scroll"><table{table_id_attr}><thead><tr>'
+        f"{empty_state}<div class=\"table-scroll\"><table{table_id_attr}><thead><tr>"
         f"{header_cells}</tr></thead><tbody>{body}</tbody></table></div>"
     )
 
@@ -568,10 +571,13 @@ def _summary_observations(report: dict) -> list[str]:
     return observations[:4]
 
 
-def _chart_container(chart_id: str, caption: str) -> str:
+def _chart_container(
+    chart_id: str, table_id: str, label: str, caption: str
+) -> str:
     return (
         f'<figure class="evidence-chart"><div id="{chart_id}" '
-        'class="chart-target" aria-live="polite"></div>'
+        f'class="chart-target" role="img" aria-label="{html.escape(label)}" '
+        f'aria-describedby="{table_id}" aria-live="polite">{_empty_chart()}</div>'
         f"<figcaption>{caption}</figcaption></figure>"
     )
 
@@ -603,22 +609,32 @@ def render_report(report: dict) -> str:
 
     trend_chart = _chart_container(
         "chart-timeseries",
+        "table-timeseries",
+        "모델 family별 주간 고유 story 추이 차트",
         f"최근 {lookback_days}일, {bucket_days}일 bucket의 family별 고유 story 수.",
     )
     emerging_chart = _chart_container(
         "chart-emerging",
+        "table-emerging",
+        "모델 family별 24시간 언급 증감 차트",
         "최근 24시간과 직전 24시간의 고유 story 수 차이.",
     )
     lineup_chart = _chart_container(
         "chart-lineup",
+        "table-lineup",
+        "모델별 최신성 가중 story 라인업 차트",
         f"전체 candidate 이력에 {half_life_days}일 half-life를 적용한 가중 story 합계.",
     )
     cooccurrence_chart = _chart_container(
         "chart-cooccurrence",
+        "table-cooccurrence",
+        "함께 언급된 모델 family 조합 차트",
         f"최근 {lookback_days}일 같은 story에 함께 나타난 resolved family pair 수.",
     )
     framing_chart = _chart_container(
         "chart-framing",
+        "table-framing",
+        "모델 family별 story framing 차트",
         f"최근 {lookback_days}일 evidence-verified extraction의 family별 stance 분포.",
     )
     framing_freshness = (
@@ -660,7 +676,7 @@ th {{ background: #edf2f7; color: #1f2937; }}
 details {{ background: #fff; border: 1px solid #d8dde3; padding: 14px; }} summary {{ cursor: pointer; font-weight: 700; }}
 code {{ background: #edf2f7; padding: 1px 4px; }}
 @media (max-width: 760px) {{ main {{ padding: 20px 14px 40px; }} h1 {{ font-size: 1.75rem; }} .kpis {{ grid-template-columns: 1fr; }} .chart-target {{ min-height: 280px; }} section {{ padding: 22px 0; }} }}
-@media print {{ body {{ background: #fff; }} main {{ max-width: none; padding: 0; }} .chart-target {{ min-height: 240px; }} details {{ border: 0; padding: 0; }} }}
+@media print {{ body {{ background: #fff; }} main {{ max-width: none; padding: 0; }} .chart-target {{ min-height: 240px; overflow: visible; }} .table-scroll {{ overflow: visible; }} .modebar {{ display: none !important; }} details {{ border: 0; padding: 0; }} }}
 </style>
 <script id="report-data" type="application/json">{report_data}</script>
 <script data-plotly-bundle="plotly-2.35.2">{plotly_bundle}</script>
