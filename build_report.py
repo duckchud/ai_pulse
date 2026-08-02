@@ -77,6 +77,35 @@ def _frame_records(frame: pd.DataFrame, limit: int) -> list[dict]:
     return frame.head(limit).where(pd.notna(frame), None).to_dict("records")
 
 
+def _top_group_records(
+    frame: pd.DataFrame,
+    top_n: int,
+    group_column: str,
+    metric_column: str,
+    row_sort_columns: list[str],
+) -> list[dict]:
+    """Keep all rows belonging to the groups with the largest total metric."""
+    if frame.empty:
+        return []
+
+    totals = (
+        frame.groupby(group_column, sort=False, dropna=False)[metric_column]
+        .sum()
+        .reset_index()
+        .sort_values(
+            [metric_column, group_column], ascending=[False, True], kind="stable"
+        )
+    )
+    selected_groups = totals.head(top_n)[group_column].tolist()
+    ranks = {group: rank for rank, group in enumerate(selected_groups)}
+    selected = frame[frame[group_column].isin(selected_groups)].copy()
+    selected["_report_rank"] = selected[group_column].map(ranks)
+    selected = selected.sort_values(
+        ["_report_rank", *row_sort_columns], kind="stable"
+    ).drop(columns="_report_rank")
+    return _frame_records(selected, len(selected))
+
+
 def _cooccurrence_pair_label(row: dict, suffix: str) -> str:
     return "/".join(
         str(row.get(f"{field}_{suffix}"))
@@ -166,6 +195,7 @@ def build_report_data(
     cooccurrence_rows = _sort_cooccurrence_rows(
         _frame_records(cooccurrence, len(cooccurrence))
     )[:top_n]
+    lineup = lineup.sort_values("weighted_count", ascending=False, kind="stable")
     return {
         "metadata": {
             "as_of": as_of,
@@ -191,11 +221,15 @@ def build_report_data(
             ),
         },
         "summary": summary,
-        "timeseries": _frame_records(timeseries, top_n * 6),
+        "timeseries": _top_group_records(
+            timeseries, top_n, "group_label", "story_count", ["bucket_start"]
+        ),
         "emerging": _frame_records(emerging, top_n),
         "lineup": _frame_records(lineup, top_n),
         "cooccurrence": cooccurrence_rows,
-        "framing": _frame_records(framing, top_n * 4),
+        "framing": _top_group_records(
+            framing, top_n, "group_label", "story_count", ["stance"]
+        ),
     }
 
 

@@ -422,6 +422,24 @@ def test_browser_framing_uses_gold_cells_without_recomputing_totals():
     assert [trace["x"] for trace in framing["traces"]] == [[2], [3]]
 
 
+def test_browser_skips_null_metric_rows():
+    result = _run_dashboard({
+        "timeseries": [], "emerging": [], "cooccurrence": [], "framing": [],
+        "lineup": [{
+            "vendor": "OpenAI",
+            "family": "GPT",
+            "version": "5",
+            "weighted_count": None,
+            "story_count": 4,
+        }],
+    })
+
+    assert not [call for call in result["calls"] if call["id"] == "chart-lineup"]
+    assert result["elements"]["chart-lineup"]["textContent"] == (
+        "해당 기준에서 관측된 결과 없음"
+    )
+
+
 def test_browser_plotly_rejection_renders_local_error_state():
     result = _run_dashboard({
         "timeseries": [{"group_label": "OpenAI/GPT", "bucket_start": 1784023200, "story_count": 4}],
@@ -631,6 +649,50 @@ def test_build_report_data_preserves_windows_and_counts_latest_extractions(
         "catalog_models": 0,
         "successful_extractions": 1,
     }
+
+
+def test_build_report_data_selects_metric_leading_groups_before_serialization(
+    temporary_db, monkeypatch
+):
+    _insert_story(temporary_db)
+    timeseries = pd.DataFrame([
+        {"group_label": "Alpha", "bucket_start": index, "story_count": 1}
+        for index in range(6)
+    ] + [
+        {"group_label": "Zeta", "bucket_start": 10, "story_count": 10},
+        {"group_label": "Zeta", "bucket_start": 11, "story_count": 10},
+    ])
+    lineup = pd.DataFrame([
+        {"vendor": "Alpha", "family": "Model", "version": "1", "weighted_count": 1},
+        {"vendor": "Zeta", "family": "Model", "version": "9", "weighted_count": 9},
+    ])
+    framing = pd.DataFrame([
+        {"group_label": "Alpha", "stance": stance, "story_count": 1}
+        for stance in ("a", "b", "c", "d")
+    ] + [
+        {"group_label": "Zeta", "stance": "positive", "story_count": 7},
+        {"group_label": "Zeta", "stance": "skeptical", "story_count": 7},
+    ])
+
+    monkeypatch.setattr("build_report.candidate_mention_timeseries", lambda *args, **kwargs: timeseries)
+    monkeypatch.setattr("build_report.candidate_emerging_models", lambda *args, **kwargs: pd.DataFrame())
+    monkeypatch.setattr("build_report.candidate_model_lineup", lambda *args, **kwargs: lineup)
+    monkeypatch.setattr("build_report.candidate_model_cooccurrence", lambda *args, **kwargs: pd.DataFrame())
+    monkeypatch.setattr("build_report.model_framing_sentiment", lambda *args, **kwargs: framing)
+
+    report = build_report_data(temporary_db, top_n=1)
+
+    assert [(row["group_label"], row["bucket_start"], row["story_count"]) for row in report["timeseries"]] == [
+        ("Zeta", 10, 10),
+        ("Zeta", 11, 10),
+    ]
+    assert [(row["vendor"], row["weighted_count"]) for row in report["lineup"]] == [
+        ("Zeta", 9),
+    ]
+    assert [(row["group_label"], row["stance"], row["story_count"]) for row in report["framing"]] == [
+        ("Zeta", "positive", 7),
+        ("Zeta", "skeptical", 7),
+    ]
 
 
 def test_chart_renderer_returns_inline_svg_for_timeseries():
