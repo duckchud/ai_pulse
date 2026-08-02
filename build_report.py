@@ -59,6 +59,10 @@ def _load_plotly_bundle() -> str:
     )
 
 
+def _load_dashboard_renderer() -> str:
+    return (Path(__file__).parent / "report_dashboard.js").read_text(encoding="utf-8")
+
+
 def _as_of(conn: sqlite3.Connection) -> str:
     row = conn.execute("SELECT MAX(created_at) AS as_of FROM stories").fetchone()
     if not row or row[0] is None:
@@ -566,6 +570,7 @@ def render_report(report: dict) -> str:
     catalog_versions = _metadata_values(metadata, "catalog_versions", "기록 없음")
     report_data = _serialize_report_data(report)
     plotly_bundle = _load_plotly_bundle()
+    dashboard_renderer = _load_dashboard_renderer()
 
     trend_chart = _chart_container(
         "chart-timeseries",
@@ -630,6 +635,7 @@ code {{ background: #edf2f7; padding: 1px 4px; }}
 </style>
 <script id="report-data" type="application/json">{report_data}</script>
 <script data-plotly-bundle="plotly-2.35.2">{plotly_bundle}</script>
+<script data-report-dashboard="plotly-renderers">{dashboard_renderer}</script>
 </head>
 <body>
 <main>

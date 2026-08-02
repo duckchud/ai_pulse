@@ -197,6 +197,21 @@ def test_render_report_has_no_external_plotly_script(sample_report, monkeypatch)
     assert "plotly-2.35.2" in rendered
 
 
+def test_render_report_inlines_plotly_renderers(sample_report):
+    rendered = render_report(sample_report)
+
+    for renderer_name in (
+        "renderTimeseries",
+        "renderEmerging",
+        "renderLineup",
+        "renderCooccurrence",
+        "renderFraming",
+    ):
+        assert renderer_name in rendered
+    assert "Plotly.newPlot" in rendered
+    assert "responsive: true" in rendered
+
+
 def test_external_plotly_bundle_is_pinned():
     bundle_path = Path(report_module.__file__).parent / "vendor" / "plotly-2.35.2.min.js"
 
