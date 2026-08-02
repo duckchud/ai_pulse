@@ -535,12 +535,16 @@ def _summary_observations(report: dict) -> list[str]:
     return observations[:4]
 
 
-def _report_figure(chart: str, caption: str) -> str:
-    return f"<figure>{chart}<figcaption>{caption}</figcaption></figure>"
+def _chart_container(chart_id: str, caption: str) -> str:
+    return (
+        f'<figure class="evidence-chart"><div id="{chart_id}" '
+        'class="chart-target" aria-live="polite"></div>'
+        f"<figcaption>{caption}</figcaption></figure>"
+    )
 
 
 def render_report(report: dict) -> str:
-    """Render report data and inline SVG charts as a self-contained HTML document."""
+    """Render report data and an interactive chart shell as standalone HTML."""
     metadata = report.get("metadata", {})
     summary = report.get("summary", {})
     lookback_days = _number(metadata.get("lookback_days"))
@@ -563,24 +567,24 @@ def render_report(report: dict) -> str:
     report_data = _serialize_report_data(report)
     plotly_bundle = _load_plotly_bundle()
 
-    trend_chart = _report_figure(
-        _render_chart("timeseries", timeseries, limit=10),
+    trend_chart = _chart_container(
+        "chart-timeseries",
         f"최근 {lookback_days}일, {bucket_days}일 bucket의 family별 고유 story 수.",
     )
-    emerging_chart = _report_figure(
-        _render_chart("emerging", emerging, limit=10),
+    emerging_chart = _chart_container(
+        "chart-emerging",
         "최근 24시간과 직전 24시간의 고유 story 수 차이.",
     )
-    lineup_chart = _report_figure(
-        _render_chart("lineup", lineup, limit=10),
+    lineup_chart = _chart_container(
+        "chart-lineup",
         f"전체 candidate 이력에 {half_life_days}일 half-life를 적용한 가중 story 합계.",
     )
-    cooccurrence_chart = _report_figure(
-        _render_chart("cooccurrence", cooccurrence, limit=10),
+    cooccurrence_chart = _chart_container(
+        "chart-cooccurrence",
         f"최근 {lookback_days}일 같은 story에 함께 나타난 resolved family pair 수.",
     )
-    framing_chart = _report_figure(
-        _render_chart("framing", framing, limit=10),
+    framing_chart = _chart_container(
+        "chart-framing",
         f"최근 {lookback_days}일 evidence-verified extraction의 family별 stance 분포.",
     )
     framing_freshness = (
@@ -607,11 +611,10 @@ h1, h2, h3 {{ color: #111827; margin: 0 0 12px; letter-spacing: 0; overflow-wrap
 h1 {{ font-size: 2.1rem; }} h2 {{ font-size: 1.35rem; }} h3 {{ font-size: 1rem; }}
 p, li {{ margin: 0 0 12px; overflow-wrap: anywhere; }} .subtitle {{ color: #4b5563; font-size: 1.05rem; }}
 .meta, .denominator, figcaption, .muted {{ color: #59636e; font-size: .9rem; }}
-.kpis {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 22px 0 0; }}
-.kpis div {{ border-left: 4px solid #2563eb; background: #fff; padding: 14px 16px; }}
+.kpis {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 22px 0 0; }}
+.kpis div {{ border-left: 4px solid #2563eb; background: #fff; min-width: 0; padding: 14px 16px; }}
 .kpis dt {{ color: #59636e; font-size: .86rem; }} .kpis dd {{ margin: 4px 0 0; color: #111827; font-size: 1.55rem; font-weight: 700; }}
-.chart-grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }}
-figure {{ margin: 16px 0; min-width: 0; }} figure svg {{ display: block; max-width: 100%; height: auto; }}
+.evidence-chart {{ margin: 16px 0; min-width: 0; }} .chart-target {{ width: 100%; min-height: 320px; overflow-x: auto; }}
 figcaption {{ margin-top: 6px; }} .chart-empty, .table-empty {{ padding: 18px; background: #fff; border-left: 3px solid #9ca3af; }}
 .table-scroll {{ overflow-x: auto; }} table {{ width: 100%; border-collapse: collapse; background: #fff; font-size: .92rem; }}
 th, td {{ border: 1px solid #d8dde3; padding: 9px 10px; text-align: left; vertical-align: top; white-space: nowrap; }}
@@ -622,7 +625,8 @@ th {{ background: #edf2f7; color: #1f2937; }}
 .limitations ul, .summary-list {{ margin: 0; padding-left: 20px; }}
 details {{ background: #fff; border: 1px solid #d8dde3; padding: 14px; }} summary {{ cursor: pointer; font-weight: 700; }}
 code {{ background: #edf2f7; padding: 1px 4px; }}
-@media (max-width: 760px) {{ main {{ padding: 20px 14px 40px; }} h1 {{ font-size: 1.75rem; }} .kpis, .chart-grid {{ grid-template-columns: 1fr; }} section {{ padding: 22px 0; }} }}
+@media (max-width: 760px) {{ main {{ padding: 20px 14px 40px; }} h1 {{ font-size: 1.75rem; }} .kpis {{ grid-template-columns: 1fr; }} .chart-target {{ min-height: 280px; }} section {{ padding: 22px 0; }} }}
+@media print {{ body {{ background: #fff; }} main {{ max-width: none; padding: 0; }} .chart-target {{ min-height: 240px; }} details {{ border: 0; padding: 0; }} }}
 </style>
 <script id="report-data" type="application/json">{report_data}</script>
 <script data-plotly-bundle="plotly-2.35.2">{plotly_bundle}</script>
@@ -633,20 +637,22 @@ code {{ background: #edf2f7; padding: 1px 4px; }}
     <h1>AI Pulse</h1>
     <p class="subtitle">Hacker News의 AI 모델 담론을 후보 매칭과 검증 추출로 분리해 읽는 정제 분석 보고서</p>
     <p class="meta">수집/후보 기준 시각(UTC): {as_of}<br>추출 기준 시각(UTC): {extraction_as_of}<br>분석 기간: 최근 {lookback_days}일 | 범위: 수집된 Hacker News story의 모델 담론</p>
-    <dl class="kpis">
-      <div><dt>수집 story</dt><dd>{_number(summary.get('stories'))}</dd></div>
-      <div><dt>모델 catalog</dt><dd>{_number(summary.get('catalog_models'))}</dd></div>
-      <div><dt>성공 extraction</dt><dd>{_number(summary.get('successful_extractions'))}</dd></div>
+    <dl class="kpis" aria-label="핵심 지표">
+      <div id="kpi-stories"><dt>수집 story</dt><dd>{_number(summary.get('stories'))}</dd></div>
+      <div id="kpi-candidates"><dt>모델 catalog</dt><dd>{_number(summary.get('catalog_models'))}</dd></div>
+      <div id="kpi-extractions"><dt>성공 extraction</dt><dd>{_number(summary.get('successful_extractions'))}</dd></div>
+      <div id="kpi-as-of"><dt>수집 기준 시각</dt><dd>{as_of}</dd></div>
     </dl>
   </header>
-  <section aria-labelledby="summary-heading">
+  <section id="insight-summary" aria-labelledby="summary-heading">
     <h2 id="summary-heading">핵심 요약</h2>
     <ul class="summary-list">{observations}</ul>
   </section>
   <section aria-labelledby="trend-heading">
     <h2 id="trend-heading">모델 담론 추이: 지속 변화와 단기 증가를 분리해 확인</h2>
     <p>주간 추이는 지속적인 언급 흐름을, 24시간 증감은 일시적 spike를 보여줍니다. 참여도는 이 보고서의 순위 근거가 아닙니다.</p>
-    <div class="chart-grid">{trend_chart}{emerging_chart}</div>
+    {trend_chart}
+    {emerging_chart}
     <p class="denominator">후보 경로 분모: 현재 catalog alias로 매칭된 수집 story입니다. 최근 {lookback_days}일 결과는 이 분모에 한정됩니다.</p>
   </section>
   <section aria-labelledby="lineup-heading">

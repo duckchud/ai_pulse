@@ -170,7 +170,7 @@ def test_render_report_contains_reader_sections_and_no_notebook_ui(sample_report
     assert "모델 담론 추이" in html
     assert "기술 부록" in html
     assert "Jupyter" not in html
-    assert "<svg" in html
+    assert 'id="chart-timeseries"' in html
     assert "최근 180일" in html
     assert "후보 경로 분모" in html
     assert "추출 경로 분모" in html
@@ -218,6 +218,43 @@ def test_render_report_separates_stale_extraction_freshness(sample_report):
     assert "이전 extraction 기반 참고 분석" in html
 
 
+def test_render_report_dashboard_has_stable_kpis_and_stale_freshness_warning(sample_report):
+    sample_report["metadata"]["as_of"] = "2026-07-17T11:15:09Z"
+    sample_report["metadata"]["extraction_as_of"] = "2026-07-14T10:02:00Z"
+    sample_report["summary"] = {
+        "stories": 1_234,
+        "catalog_models": 56,
+        "successful_extractions": 789,
+    }
+
+    html = render_report(sample_report)
+
+    assert 'id="kpi-stories"' in html
+    assert 'id="kpi-candidates"' in html
+    assert 'id="kpi-extractions"' in html
+    assert 'id="kpi-as-of"' in html
+    assert 'id="insight-summary"' in html
+    assert ">1,234<" in html
+    assert ">56<" in html
+    assert ">789<" in html
+    assert "2026-07-17T11:15:09Z" in html
+    assert "이전 extraction 기반 참고 분석" in html
+
+
+def test_render_report_chart_containers_are_not_inside_legacy_chart_grid(sample_report):
+    html = render_report(sample_report)
+
+    for chart_id in (
+        "chart-timeseries",
+        "chart-emerging",
+        "chart-lineup",
+        "chart-cooccurrence",
+        "chart-framing",
+    ):
+        assert f'id="{chart_id}"' in html
+    assert "chart-grid" not in html
+
+
 def test_build_report_data_records_latest_extraction_time(temporary_db, tmp_path):
     _insert_story(temporary_db)
     _import_catalog(temporary_db, tmp_path)
@@ -258,7 +295,7 @@ def test_render_report_escapes_dynamic_text(sample_report):
     assert "<script>alert(1)</script>" not in visible_html
 
 
-def test_render_report_assigns_document_unique_svg_ids(sample_report):
+def test_render_report_assigns_document_unique_dashboard_ids(sample_report):
     sample_report["emerging"] = [
         {"group_label": "Anthropic/Claude", "mention_delta": 3},
     ]
@@ -266,8 +303,8 @@ def test_render_report_assigns_document_unique_svg_ids(sample_report):
     html = render_report(sample_report)
     ids = re.findall(r'\bid="([^"]+)"', html)
 
-    assert "timeseries_svg_id_0" in ids
-    assert "emerging_svg_id_0" in ids
+    assert "chart-timeseries" in ids
+    assert "chart-emerging" in ids
     assert len(ids) == len(set(ids))
 
 
@@ -327,7 +364,7 @@ def test_main_writes_self_contained_report_for_valid_database(
     assert output_path.exists()
     html = output_path.read_text(encoding="utf-8")
     assert output_path.stat().st_size > 10_000
-    assert "<svg" in html
+    assert 'id="chart-timeseries"' in html
     assert "2026-07-14T10:00:00Z" in html
     assert not re.search(
         r"<(?:embed|iframe|img|link|object|script)\\b[^>]*https://", html,
