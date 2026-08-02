@@ -1,10 +1,14 @@
 import json
 import re
+import shutil
+import subprocess
 import sys
+from pathlib import Path
 
 import pandas as pd
 import pytest
 
+import build_report as report_module
 from build_report import (
     _render_chart,
     _render_cooccurrence_chart,
@@ -19,6 +23,69 @@ from build_report import (
 )
 from db import save_extraction, upsert_story_candidates
 from reference_data import import_catalog
+
+
+_REAL_LOAD_PLOTLY_BUNDLE = report_module._load_plotly_bundle
+_DASHBOARD_SOURCE = Path(report_module.__file__).with_name("report_dashboard.js")
+
+
+@pytest.fixture(autouse=True)
+def stub_plotly_bundle(monkeypatch):
+    """Keep HTML rendering tests independent of the 4.4 MB vendored bundle."""
+    monkeypatch.setattr(
+        report_module,
+        "_load_plotly_bundle",
+        lambda: "/* plotly-2.35.2: Plotly.newPlot test marker */",
+    )
+
+
+def _run_dashboard(report, reject_plotly=False):
+    """Run the optional Node browser contract harness when Node.js is installed."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is not installed; skipping browser contract test")
+    harness = """
+const fs = require("fs");
+const source = fs.readFileSync(process.argv[1], "utf8");
+const report = JSON.parse(process.argv[2]);
+const rejectPlotly = process.argv[3] === "1";
+const calls = [];
+const elements = {};
+function element(id) {
+  return elements[id] || (elements[id] = {
+    id,
+    children: [],
+    textContent: "",
+    replaceChildren() { this.children = []; this.textContent = ""; },
+    appendChild(child) { this.children.push(child); this.textContent = child.textContent || ""; },
+  });
+}
+global.window = {
+  Plotly: {
+    newPlot(target, traces, layout, config) {
+      calls.push({ id: target.id, traces, layout, config });
+      return rejectPlotly ? Promise.reject(new Error("plot failed")) : Promise.resolve();
+    },
+  },
+};
+global.document = {
+  readyState: "complete",
+  getElementById(id) {
+    return id === "report-data" ? { textContent: JSON.stringify(report) } : element(id);
+  },
+  createElement() { return { className: "", textContent: "" }; },
+  addEventListener() {},
+};
+eval(source);
+setTimeout(() => process.stdout.write(JSON.stringify({ calls, elements })), 0);
+"""
+    result = subprocess.run(
+        [node, "-e", harness, str(_DASHBOARD_SOURCE), json.dumps(report), "1" if reject_plotly else "0"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(result.stdout)
 
 
 def _insert_story(conn, story_id="story-1", created_at="2026-07-14T10:00:00Z"):
@@ -155,11 +222,53 @@ def test_render_report_contains_reader_sections_and_no_notebook_ui(sample_report
     assert "모델 담론 추이" in html
     assert "기술 부록" in html
     assert "Jupyter" not in html
-    assert "<svg" in html
+    assert 'id="chart-timeseries"' in html
     assert "최근 180일" in html
     assert "후보 경로 분모" in html
     assert "추출 경로 분모" in html
     assert "관측 불충분" in html
+
+
+def test_render_report_embeds_html_safe_report_data(sample_report):
+    sample_report["metadata"]["as_of"] = "</script><script>alert(1)</script>"
+
+    rendered = render_report(sample_report)
+
+    assert '<script id="report-data" type="application/json">' in rendered
+    assert '"timeseries"' in rendered
+    assert "</script><script>alert(1)</script>" not in rendered
+    assert "<\\/script><script>alert(1)<\\/script>" in rendered
+
+
+def test_render_report_has_no_external_plotly_script(sample_report, monkeypatch):
+    monkeypatch.setattr(report_module, "_load_plotly_bundle", _REAL_LOAD_PLOTLY_BUNDLE)
+
+    rendered = render_report(sample_report)
+
+    assert not re.search(r'<script[^>]+src=["\']https?://', rendered, flags=re.I)
+    assert "plotly-2.35.2" in rendered
+
+
+def test_render_report_inlines_plotly_renderers(sample_report):
+    rendered = render_report(sample_report)
+
+    for renderer_name in (
+        "renderTimeseries",
+        "renderEmerging",
+        "renderLineup",
+        "renderCooccurrence",
+        "renderFraming",
+    ):
+        assert renderer_name in rendered
+    assert "Plotly.newPlot" in rendered
+    assert "responsive: true" in rendered
+
+
+def test_external_plotly_bundle_is_pinned():
+    bundle_path = Path(report_module.__file__).parent / "vendor" / "plotly-2.35.2.min.js"
+
+    assert bundle_path.is_file()
+    assert "Plotly.newPlot" in bundle_path.read_text(encoding="utf-8")
 
 
 def test_render_report_separates_stale_extraction_freshness(sample_report):
@@ -174,6 +283,195 @@ def test_render_report_separates_stale_extraction_freshness(sample_report):
     assert "수집/후보 기준 시각" in html
     assert "추출 기준 시각" in html
     assert "이전 extraction 기반 참고 분석" in html
+
+
+def test_render_report_dashboard_has_stable_kpis_and_stale_freshness_warning(sample_report):
+    sample_report["metadata"]["as_of"] = "2026-07-17T11:15:09Z"
+    sample_report["metadata"]["extraction_as_of"] = "2026-07-14T10:02:00Z"
+    sample_report["summary"] = {
+        "stories": 1_234,
+        "catalog_models": 56,
+        "successful_extractions": 789,
+    }
+
+    html = render_report(sample_report)
+
+    assert 'id="kpi-stories"' in html
+    assert 'id="kpi-candidates"' in html
+    assert 'id="kpi-extractions"' in html
+    assert 'id="kpi-as-of"' in html
+    assert 'id="insight-summary"' in html
+    assert ">1,234<" in html
+    assert ">56<" in html
+    assert ">789<" in html
+    assert "2026-07-17T11:15:09Z" in html
+    assert "이전 extraction 기반 참고 분석" in html
+
+
+def test_render_report_chart_containers_are_not_inside_legacy_chart_grid(sample_report):
+    html = render_report(sample_report)
+
+    for chart_id in (
+        "chart-timeseries",
+        "chart-emerging",
+        "chart-lineup",
+        "chart-cooccurrence",
+        "chart-framing",
+    ):
+        assert f'id="{chart_id}"' in html
+    assert "chart-grid" not in html
+
+
+def test_render_report_has_timeseries_and_emerging_companion_tables(sample_report):
+    sample_report["emerging"] = [{"group_label": "OpenAI/GPT", "mention_delta": 3}]
+
+    html = render_report(sample_report)
+
+    assert 'id="table-timeseries"' in html
+    assert 'id="table-emerging"' in html
+    assert "bucket" in html
+    assert "언급 증감" in html
+
+
+def test_empty_report_keeps_accessible_chart_fallbacks_tables_and_stale_warning(sample_report):
+    sample_report.update({
+        "timeseries": [],
+        "emerging": [],
+        "lineup": [],
+        "cooccurrence": [],
+        "framing": [],
+    })
+
+    html = render_report(sample_report)
+
+    chart_labels = {
+        "timeseries": "모델 family별 주간 고유 story 추이 차트",
+        "emerging": "모델 family별 24시간 언급 증감 차트",
+        "lineup": "모델별 최신성 가중 story 라인업 차트",
+        "cooccurrence": "함께 언급된 모델 family 조합 차트",
+        "framing": "모델 family별 story framing 차트",
+    }
+    table_headers = {
+        "timeseries": "bucket 시작(UTC)",
+        "emerging": "언급 증감",
+        "lineup": "최신성 가중치",
+        "cooccurrence": "함께 언급된 story",
+        "framing": "stance 원문 label",
+    }
+    for chart_key, label in chart_labels.items():
+        assert (
+            f'id="chart-{chart_key}" class="chart-target" role="img" '
+            f'aria-label="{label}" aria-describedby="table-{chart_key}"'
+        ) in html
+        assert f'id="table-{chart_key}"' in html
+        assert table_headers[chart_key] in html
+
+    assert html.count("해당 기준에서 관측된 결과 없음") >= 5
+    assert "이전 extraction 기반 참고 분석" in html
+    assert ".modebar { display: none !important; }" in html
+    assert not re.search(r'\b(?:src|href)=["\']https?://', html, flags=re.I)
+
+
+def test_render_report_drops_malformed_section_values_and_keeps_fallbacks(sample_report):
+    sample_report.update({
+        "timeseries": None,
+        "emerging": "invalid",
+        "lineup": [None, "invalid"],
+        "cooccurrence": [{"family_a": "GPT", "family_b": "Claude", "story_count": 2}, None],
+        "framing": [None],
+    })
+
+    html = render_report(sample_report)
+
+    for chart_key in ("timeseries", "emerging", "lineup", "cooccurrence", "framing"):
+        assert f'id="chart-{chart_key}"' in html
+        assert f'id="table-{chart_key}"' in html
+    assert html.count("해당 기준에서 관측된 결과 없음") >= 5
+    assert "이전 extraction 기반 참고 분석" in html
+    assert "GPT" in html
+    assert "Claude" in html
+
+
+def test_browser_timeseries_formats_numeric_buckets_and_fills_sparse_series():
+    result = _run_dashboard({
+        "timeseries": [
+            {"group_label": "OpenAI/GPT", "bucket_start": 1784023200, "story_count": 4},
+            {"group_label": "Anthropic/Claude", "bucket_start": 1784628000, "story_count": 2},
+        ],
+        "emerging": [], "lineup": [], "cooccurrence": [], "framing": [],
+    })
+
+    timeseries_calls = [call for call in result["calls"] if call["id"] == "chart-timeseries"]
+    traces = {trace["name"]: trace for trace in timeseries_calls[0]["traces"]}
+    assert traces["OpenAI/GPT"]["x"] == ["2026-07-14", "2026-07-21"]
+    assert traces["OpenAI/GPT"]["y"] == [4, 0]
+    assert traces["Anthropic/Claude"]["x"] == ["2026-07-14", "2026-07-21"]
+    assert traces["Anthropic/Claude"]["y"] == [0, 2]
+
+
+def test_browser_framing_uses_gold_cells_without_recomputing_totals():
+    result = _run_dashboard({
+        "timeseries": [], "emerging": [], "lineup": [], "cooccurrence": [],
+        "framing": [
+            {"group_label": "OpenAI/GPT", "stance": "positive", "story_count": 2},
+            {"group_label": "OpenAI/GPT", "stance": "skeptical", "story_count": 3},
+        ],
+    })
+
+    framing = [call for call in result["calls"] if call["id"] == "chart-framing"][0]
+    assert [trace["x"] for trace in framing["traces"]] == [[2], [3]]
+
+
+def test_browser_skips_non_numeric_metric_rows():
+    result = _run_dashboard({
+        "timeseries": [], "emerging": [], "cooccurrence": [], "framing": [],
+        "lineup": [
+            {
+                "vendor": "OpenAI",
+                "family": "GPT",
+                "version": "5",
+                "weighted_count": None,
+                "story_count": 4,
+            },
+            {
+                "vendor": "Array",
+                "family": "Metric",
+                "version": "1",
+                "weighted_count": [],
+                "story_count": 4,
+            },
+            {
+                "vendor": "Boolean",
+                "family": "Metric",
+                "version": "1",
+                "weighted_count": True,
+                "story_count": 4,
+            },
+            {
+                "vendor": "String",
+                "family": "Metric",
+                "version": "1",
+                "weighted_count": "9",
+                "story_count": 4,
+            },
+        ],
+    })
+
+    assert not [call for call in result["calls"] if call["id"] == "chart-lineup"]
+    assert result["elements"]["chart-lineup"]["textContent"] == (
+        "해당 기준에서 관측된 결과 없음"
+    )
+
+
+def test_browser_plotly_rejection_renders_local_error_state():
+    result = _run_dashboard({
+        "timeseries": [{"group_label": "OpenAI/GPT", "bucket_start": 1784023200, "story_count": 4}],
+        "emerging": [], "lineup": [], "cooccurrence": [], "framing": [],
+    }, reject_plotly=True)
+
+    assert result["elements"]["chart-timeseries"]["textContent"] == (
+        "차트를 표시할 수 없습니다. 아래 표를 확인하세요."
+    )
 
 
 def test_build_report_data_records_latest_extraction_time(temporary_db, tmp_path):
@@ -204,13 +502,19 @@ def test_render_report_escapes_dynamic_text(sample_report):
     sample_report["metadata"]["as_of"] = "<unsafe>"
 
     html = render_report(sample_report)
+    visible_html = re.sub(
+        r'<script id="report-data" type="application/json">.*?</script>',
+        "",
+        html,
+        flags=re.DOTALL,
+    )
 
-    assert "<unsafe>" not in html
-    assert "&lt;unsafe&gt;" in html
-    assert "<script>alert(1)</script>" not in html
+    assert "<unsafe>" not in visible_html
+    assert "&lt;unsafe&gt;" in visible_html
+    assert "<script>alert(1)</script>" not in visible_html
 
 
-def test_render_report_assigns_document_unique_svg_ids(sample_report):
+def test_render_report_assigns_document_unique_dashboard_ids(sample_report):
     sample_report["emerging"] = [
         {"group_label": "Anthropic/Claude", "mention_delta": 3},
     ]
@@ -218,8 +522,8 @@ def test_render_report_assigns_document_unique_svg_ids(sample_report):
     html = render_report(sample_report)
     ids = re.findall(r'\bid="([^"]+)"', html)
 
-    assert "timeseries_svg_id_0" in ids
-    assert "emerging_svg_id_0" in ids
+    assert "chart-timeseries" in ids
+    assert "chart-emerging" in ids
     assert len(ids) == len(set(ids))
 
 
@@ -279,7 +583,7 @@ def test_main_writes_self_contained_report_for_valid_database(
     assert output_path.exists()
     html = output_path.read_text(encoding="utf-8")
     assert output_path.stat().st_size > 10_000
-    assert "<svg" in html
+    assert 'id="chart-timeseries"' in html
     assert "2026-07-14T10:00:00Z" in html
     assert not re.search(
         r"<(?:embed|iframe|img|link|object|script)\\b[^>]*https://", html,
@@ -368,6 +672,50 @@ def test_build_report_data_preserves_windows_and_counts_latest_extractions(
         "catalog_models": 0,
         "successful_extractions": 1,
     }
+
+
+def test_build_report_data_selects_metric_leading_groups_before_serialization(
+    temporary_db, monkeypatch
+):
+    _insert_story(temporary_db)
+    timeseries = pd.DataFrame([
+        {"group_label": "Alpha", "bucket_start": index, "story_count": 1}
+        for index in range(6)
+    ] + [
+        {"group_label": "Zeta", "bucket_start": 10, "story_count": 10},
+        {"group_label": "Zeta", "bucket_start": 11, "story_count": 10},
+    ])
+    lineup = pd.DataFrame([
+        {"vendor": "Alpha", "family": "Model", "version": "1", "weighted_count": 1},
+        {"vendor": "Zeta", "family": "Model", "version": "9", "weighted_count": 9},
+    ])
+    framing = pd.DataFrame([
+        {"group_label": "Alpha", "stance": stance, "story_count": 1}
+        for stance in ("a", "b", "c", "d")
+    ] + [
+        {"group_label": "Zeta", "stance": "positive", "story_count": 7},
+        {"group_label": "Zeta", "stance": "skeptical", "story_count": 7},
+    ])
+
+    monkeypatch.setattr("build_report.candidate_mention_timeseries", lambda *args, **kwargs: timeseries)
+    monkeypatch.setattr("build_report.candidate_emerging_models", lambda *args, **kwargs: pd.DataFrame())
+    monkeypatch.setattr("build_report.candidate_model_lineup", lambda *args, **kwargs: lineup)
+    monkeypatch.setattr("build_report.candidate_model_cooccurrence", lambda *args, **kwargs: pd.DataFrame())
+    monkeypatch.setattr("build_report.model_framing_sentiment", lambda *args, **kwargs: framing)
+
+    report = build_report_data(temporary_db, top_n=1)
+
+    assert [(row["group_label"], row["bucket_start"], row["story_count"]) for row in report["timeseries"]] == [
+        ("Zeta", 10, 10),
+        ("Zeta", 11, 10),
+    ]
+    assert [(row["vendor"], row["weighted_count"]) for row in report["lineup"]] == [
+        ("Zeta", 9),
+    ]
+    assert [(row["group_label"], row["stance"], row["story_count"]) for row in report["framing"]] == [
+        ("Zeta", "positive", 7),
+        ("Zeta", "skeptical", 7),
+    ]
 
 
 def test_chart_renderer_returns_inline_svg_for_timeseries():
