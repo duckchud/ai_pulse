@@ -3,8 +3,10 @@
 import argparse
 import html
 import io
+import json
 import re
 import sqlite3
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -47,6 +49,21 @@ _CHART_RENDERERS = {
 }
 
 
+def _serialize_report_data(report: dict) -> str:
+    payload = json.dumps(report, ensure_ascii=False, separators=(",", ":"))
+    return payload.replace("</", "<\\/")
+
+
+def _load_plotly_bundle() -> str:
+    return (Path(__file__).parent / "vendor" / "plotly-2.35.2.min.js").read_text(
+        encoding="utf-8"
+    )
+
+
+def _load_dashboard_renderer() -> str:
+    return (Path(__file__).parent / "report_dashboard.js").read_text(encoding="utf-8")
+
+
 def _as_of(conn: sqlite3.Connection) -> str:
     row = conn.execute("SELECT MAX(created_at) AS as_of FROM stories").fetchone()
     if not row or row[0] is None:
@@ -58,6 +75,35 @@ def _frame_records(frame: pd.DataFrame, limit: int) -> list[dict]:
     if frame.empty:
         return []
     return frame.head(limit).where(pd.notna(frame), None).to_dict("records")
+
+
+def _top_group_records(
+    frame: pd.DataFrame,
+    top_n: int,
+    group_column: str,
+    metric_column: str,
+    row_sort_columns: list[str],
+) -> list[dict]:
+    """Keep all rows belonging to the groups with the largest total metric."""
+    if frame.empty:
+        return []
+
+    totals = (
+        frame.groupby(group_column, sort=False, dropna=False)[metric_column]
+        .sum()
+        .reset_index()
+        .sort_values(
+            [metric_column, group_column], ascending=[False, True], kind="stable"
+        )
+    )
+    selected_groups = totals.head(top_n)[group_column].tolist()
+    ranks = {group: rank for rank, group in enumerate(selected_groups)}
+    selected = frame[frame[group_column].isin(selected_groups)].copy()
+    selected["_report_rank"] = selected[group_column].map(ranks)
+    selected = selected.sort_values(
+        ["_report_rank", *row_sort_columns], kind="stable"
+    ).drop(columns="_report_rank")
+    return _frame_records(selected, len(selected))
 
 
 def _cooccurrence_pair_label(row: dict, suffix: str) -> str:
@@ -149,6 +195,7 @@ def build_report_data(
     cooccurrence_rows = _sort_cooccurrence_rows(
         _frame_records(cooccurrence, len(cooccurrence))
     )[:top_n]
+    lineup = lineup.sort_values("weighted_count", ascending=False, kind="stable")
     return {
         "metadata": {
             "as_of": as_of,
@@ -174,11 +221,15 @@ def build_report_data(
             ),
         },
         "summary": summary,
-        "timeseries": _frame_records(timeseries, top_n * 6),
+        "timeseries": _top_group_records(
+            timeseries, top_n, "group_label", "story_count", ["bucket_start"]
+        ),
         "emerging": _frame_records(emerging, top_n),
         "lineup": _frame_records(lineup, top_n),
         "cooccurrence": cooccurrence_rows,
-        "framing": _frame_records(framing, top_n * 4),
+        "framing": _top_group_records(
+            framing, top_n, "group_label", "story_count", ["stance"]
+        ),
     }
 
 
@@ -415,17 +466,53 @@ def _metadata_values(metadata: dict, key: str, fallback: str) -> str:
     return ", ".join(_text(value) for value in values)
 
 
-def _report_table(headers: list[str], rows: list[list[str]]) -> str:
+def _section_rows(value: object) -> list[dict]:
+    """Keep only mapping rows from an untrusted report section."""
+    if not isinstance(value, list):
+        return []
+    return [dict(row) for row in value if isinstance(row, Mapping)]
+
+
+def _report_table(headers: list[str], rows: list[list[str]], table_id: str | None = None) -> str:
     header_cells = "".join(f"<th scope=\"col\">{html.escape(label)}</th>" for label in headers)
-    if not rows:
-        return '<p class="table-empty">세부 표에 표시할 관측값이 없습니다.</p>'
+    table_id_attr = f' id="{html.escape(table_id)}"' if table_id else ""
     body = "".join(
         "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>"
         for row in rows
     )
+    empty_state = (
+        '<p class="table-empty">세부 표에 표시할 관측값이 없습니다.</p>'
+        if not rows
+        else ""
+    )
     return (
-        '<div class="table-scroll"><table><thead><tr>'
+        f"{empty_state}<div class=\"table-scroll\"><table{table_id_attr}><thead><tr>"
         f"{header_cells}</tr></thead><tbody>{body}</tbody></table></div>"
+    )
+
+
+def _timeseries_table(rows: list[dict]) -> str:
+    return _report_table(
+        ["모델 family", "bucket 시작(UTC)", "고유 story"],
+        [[
+            _text(row.get("group_label")),
+            _text(_bucket_label(row.get("bucket_start"))),
+            _number(row.get("story_count")),
+        ] for row in rows],
+        table_id="table-timeseries",
+    )
+
+
+def _emerging_table(rows: list[dict]) -> str:
+    return _report_table(
+        ["모델 family", "최근 story", "직전 story", "언급 증감"],
+        [[
+            _text(row.get("group_label")),
+            _number(row.get("recent_story_count")),
+            _number(row.get("previous_story_count")),
+            _number(row.get("mention_delta")),
+        ] for row in rows],
+        table_id="table-emerging",
     )
 
 
@@ -439,6 +526,7 @@ def _lineup_table(rows: list[dict]) -> str:
             _number(row.get("story_count")),
             _decimal(row.get("weighted_count")),
         ] for row in rows],
+        table_id="table-lineup",
     )
 
 
@@ -450,6 +538,7 @@ def _cooccurrence_table(rows: list[dict]) -> str:
             _text(row.get("family_b")),
             _number(row.get("story_count")),
         ] for row in rows],
+        table_id="table-cooccurrence",
     )
 
 
@@ -461,6 +550,7 @@ def _framing_table(rows: list[dict]) -> str:
             _text(row.get("stance")),
             _number(row.get("story_count")),
         ] for row in rows],
+        table_id="table-framing",
     )
 
 
@@ -523,12 +613,22 @@ def _summary_observations(report: dict) -> list[str]:
     return observations[:4]
 
 
-def _report_figure(chart: str, caption: str) -> str:
-    return f"<figure>{chart}<figcaption>{caption}</figcaption></figure>"
+def _chart_container(
+    chart_id: str, table_id: str, label: str, caption: str
+) -> str:
+    return (
+        f'<figure class="evidence-chart"><div id="{chart_id}" '
+        f'class="chart-target" role="img" aria-label="{html.escape(label)}" '
+        f'aria-describedby="{table_id}" aria-live="polite">{_empty_chart()}</div>'
+        f"<figcaption>{caption}</figcaption></figure>"
+    )
 
 
 def render_report(report: dict) -> str:
-    """Render report data and inline SVG charts as a self-contained HTML document."""
+    """Render report data and an interactive chart shell as standalone HTML."""
+    report = dict(report)
+    for section in ("timeseries", "emerging", "lineup", "cooccurrence", "framing"):
+        report[section] = _section_rows(report.get(section))
     metadata = report.get("metadata", {})
     summary = report.get("summary", {})
     lookback_days = _number(metadata.get("lookback_days"))
@@ -548,25 +648,38 @@ def render_report(report: dict) -> str:
     )
     prompt_versions = _metadata_values(metadata, "prompt_versions", PROMPT_VERSION)
     catalog_versions = _metadata_values(metadata, "catalog_versions", "기록 없음")
+    report_data = _serialize_report_data(report)
+    plotly_bundle = _load_plotly_bundle()
+    dashboard_renderer = _load_dashboard_renderer()
 
-    trend_chart = _report_figure(
-        _render_chart("timeseries", timeseries, limit=10),
+    trend_chart = _chart_container(
+        "chart-timeseries",
+        "table-timeseries",
+        "모델 family별 주간 고유 story 추이 차트",
         f"최근 {lookback_days}일, {bucket_days}일 bucket의 family별 고유 story 수.",
     )
-    emerging_chart = _report_figure(
-        _render_chart("emerging", emerging, limit=10),
+    emerging_chart = _chart_container(
+        "chart-emerging",
+        "table-emerging",
+        "모델 family별 24시간 언급 증감 차트",
         "최근 24시간과 직전 24시간의 고유 story 수 차이.",
     )
-    lineup_chart = _report_figure(
-        _render_chart("lineup", lineup, limit=10),
+    lineup_chart = _chart_container(
+        "chart-lineup",
+        "table-lineup",
+        "모델별 최신성 가중 story 라인업 차트",
         f"전체 candidate 이력에 {half_life_days}일 half-life를 적용한 가중 story 합계.",
     )
-    cooccurrence_chart = _report_figure(
-        _render_chart("cooccurrence", cooccurrence, limit=10),
+    cooccurrence_chart = _chart_container(
+        "chart-cooccurrence",
+        "table-cooccurrence",
+        "함께 언급된 모델 family 조합 차트",
         f"최근 {lookback_days}일 같은 story에 함께 나타난 resolved family pair 수.",
     )
-    framing_chart = _report_figure(
-        _render_chart("framing", framing, limit=10),
+    framing_chart = _chart_container(
+        "chart-framing",
+        "table-framing",
+        "모델 family별 story framing 차트",
         f"최근 {lookback_days}일 evidence-verified extraction의 family별 stance 분포.",
     )
     framing_freshness = (
@@ -593,11 +706,10 @@ h1, h2, h3 {{ color: #111827; margin: 0 0 12px; letter-spacing: 0; overflow-wrap
 h1 {{ font-size: 2.1rem; }} h2 {{ font-size: 1.35rem; }} h3 {{ font-size: 1rem; }}
 p, li {{ margin: 0 0 12px; overflow-wrap: anywhere; }} .subtitle {{ color: #4b5563; font-size: 1.05rem; }}
 .meta, .denominator, figcaption, .muted {{ color: #59636e; font-size: .9rem; }}
-.kpis {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 22px 0 0; }}
-.kpis div {{ border-left: 4px solid #2563eb; background: #fff; padding: 14px 16px; }}
+.kpis {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 22px 0 0; }}
+.kpis div {{ border-left: 4px solid #2563eb; background: #fff; min-width: 0; padding: 14px 16px; }}
 .kpis dt {{ color: #59636e; font-size: .86rem; }} .kpis dd {{ margin: 4px 0 0; color: #111827; font-size: 1.55rem; font-weight: 700; }}
-.chart-grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }}
-figure {{ margin: 16px 0; min-width: 0; }} figure svg {{ display: block; max-width: 100%; height: auto; }}
+.evidence-chart {{ margin: 16px 0; min-width: 0; }} .chart-target {{ width: 100%; min-height: 320px; overflow-x: auto; }}
 figcaption {{ margin-top: 6px; }} .chart-empty, .table-empty {{ padding: 18px; background: #fff; border-left: 3px solid #9ca3af; }}
 .table-scroll {{ overflow-x: auto; }} table {{ width: 100%; border-collapse: collapse; background: #fff; font-size: .92rem; }}
 th, td {{ border: 1px solid #d8dde3; padding: 9px 10px; text-align: left; vertical-align: top; white-space: nowrap; }}
@@ -608,8 +720,12 @@ th {{ background: #edf2f7; color: #1f2937; }}
 .limitations ul, .summary-list {{ margin: 0; padding-left: 20px; }}
 details {{ background: #fff; border: 1px solid #d8dde3; padding: 14px; }} summary {{ cursor: pointer; font-weight: 700; }}
 code {{ background: #edf2f7; padding: 1px 4px; }}
-@media (max-width: 760px) {{ main {{ padding: 20px 14px 40px; }} h1 {{ font-size: 1.75rem; }} .kpis, .chart-grid {{ grid-template-columns: 1fr; }} section {{ padding: 22px 0; }} }}
+@media (max-width: 760px) {{ main {{ padding: 20px 14px 40px; }} h1 {{ font-size: 1.75rem; }} .kpis {{ grid-template-columns: 1fr; }} .chart-target {{ min-height: 280px; }} section {{ padding: 22px 0; }} }}
+@media print {{ body {{ background: #fff; }} main {{ max-width: none; padding: 0; }} .chart-target {{ min-height: 240px; overflow: visible; }} .table-scroll {{ overflow: visible; }} .modebar {{ display: none !important; }} details {{ border: 0; padding: 0; }} }}
 </style>
+<script id="report-data" type="application/json">{report_data}</script>
+<script data-plotly-bundle="plotly-2.35.2">{plotly_bundle}</script>
+<script data-report-dashboard="plotly-renderers">{dashboard_renderer}</script>
 </head>
 <body>
 <main>
@@ -617,20 +733,24 @@ code {{ background: #edf2f7; padding: 1px 4px; }}
     <h1>AI Pulse</h1>
     <p class="subtitle">Hacker News의 AI 모델 담론을 후보 매칭과 검증 추출로 분리해 읽는 정제 분석 보고서</p>
     <p class="meta">수집/후보 기준 시각(UTC): {as_of}<br>추출 기준 시각(UTC): {extraction_as_of}<br>분석 기간: 최근 {lookback_days}일 | 범위: 수집된 Hacker News story의 모델 담론</p>
-    <dl class="kpis">
-      <div><dt>수집 story</dt><dd>{_number(summary.get('stories'))}</dd></div>
-      <div><dt>모델 catalog</dt><dd>{_number(summary.get('catalog_models'))}</dd></div>
-      <div><dt>성공 extraction</dt><dd>{_number(summary.get('successful_extractions'))}</dd></div>
+    <dl class="kpis" aria-label="핵심 지표">
+      <div id="kpi-stories"><dt>수집 story</dt><dd>{_number(summary.get('stories'))}</dd></div>
+      <div id="kpi-candidates"><dt>모델 catalog</dt><dd>{_number(summary.get('catalog_models'))}</dd></div>
+      <div id="kpi-extractions"><dt>성공 extraction</dt><dd>{_number(summary.get('successful_extractions'))}</dd></div>
+      <div id="kpi-as-of"><dt>수집 기준 시각</dt><dd>{as_of}</dd></div>
     </dl>
   </header>
-  <section aria-labelledby="summary-heading">
+  <section id="insight-summary" aria-labelledby="summary-heading">
     <h2 id="summary-heading">핵심 요약</h2>
     <ul class="summary-list">{observations}</ul>
   </section>
   <section aria-labelledby="trend-heading">
     <h2 id="trend-heading">모델 담론 추이: 지속 변화와 단기 증가를 분리해 확인</h2>
     <p>주간 추이는 지속적인 언급 흐름을, 24시간 증감은 일시적 spike를 보여줍니다. 참여도는 이 보고서의 순위 근거가 아닙니다.</p>
-    <div class="chart-grid">{trend_chart}{emerging_chart}</div>
+    {trend_chart}
+    {emerging_chart}
+    {_timeseries_table(timeseries)}
+    {_emerging_table(emerging)}
     <p class="denominator">후보 경로 분모: 현재 catalog alias로 매칭된 수집 story입니다. 최근 {lookback_days}일 결과는 이 분모에 한정됩니다.</p>
   </section>
   <section aria-labelledby="lineup-heading">
