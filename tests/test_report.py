@@ -23,6 +23,9 @@ from db import save_extraction, upsert_story_candidates
 from reference_data import import_catalog
 
 
+_REAL_LOAD_PLOTLY_BUNDLE = report_module._load_plotly_bundle
+
+
 @pytest.fixture(autouse=True)
 def stub_plotly_bundle(monkeypatch):
     """Keep HTML rendering tests independent of the 4.4 MB vendored bundle."""
@@ -185,10 +188,12 @@ def test_render_report_embeds_html_safe_report_data(sample_report):
     assert "<\\/script><script>alert(1)<\\/script>" in rendered
 
 
-def test_render_report_has_no_external_plotly_script(sample_report):
+def test_render_report_has_no_external_plotly_script(sample_report, monkeypatch):
+    monkeypatch.setattr(report_module, "_load_plotly_bundle", _REAL_LOAD_PLOTLY_BUNDLE)
+
     rendered = render_report(sample_report)
 
-    assert 'src="https://' not in rendered
+    assert not re.search(r'<script[^>]+src=["\']https?://', rendered, flags=re.I)
     assert "plotly-2.35.2" in rendered
 
 

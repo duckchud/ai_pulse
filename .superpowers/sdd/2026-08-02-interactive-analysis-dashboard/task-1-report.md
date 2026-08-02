@@ -29,3 +29,21 @@ timeout 90s pytest -q tests/test_report.py
 ## Self Review
 
 No Task 1 correctness issues found. The report remains self-contained and has no external Plotly script source; the vendored bundle is loaded only at report-render time.
+
+## Review Follow-up
+
+The external-script contract test now restores the real `_load_plotly_bundle()` implementation for its own render, while the autouse small-bundle stub remains in place for the rest of the render test suite. The assertion now checks only for an external HTML script tag:
+
+```python
+re.search(r'<script[^>]+src=["\\']https?://', rendered, flags=re.I)
+```
+
+This permits dormant URL strings within the vendored Plotly source while rejecting generated `<script src="https://...">` markup.
+
+```text
+timeout 90s pytest -q tests/test_report.py -k 'report_data or external_plotly'
+7 passed, 27 deselected, 2 warnings in 1.74s
+
+timeout 90s pytest -q tests/test_report.py
+34 passed, 12 warnings in 4.24s
+```
