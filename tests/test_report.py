@@ -1,5 +1,6 @@
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -39,6 +40,10 @@ def stub_plotly_bundle(monkeypatch):
 
 
 def _run_dashboard(report, reject_plotly=False):
+    """Run the optional Node browser contract harness when Node.js is installed."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is not installed; skipping browser contract test")
     harness = """
 const fs = require("fs");
 const source = fs.readFileSync(process.argv[1], "utf8");
@@ -75,7 +80,7 @@ eval(source);
 setTimeout(() => process.stdout.write(JSON.stringify({ calls, elements })), 0);
 """
     result = subprocess.run(
-        ["node", "-e", harness, str(_DASHBOARD_SOURCE), json.dumps(report), "1" if reject_plotly else "0"],
+        [node, "-e", harness, str(_DASHBOARD_SOURCE), json.dumps(report), "1" if reject_plotly else "0"],
         check=True,
         capture_output=True,
         text=True,
