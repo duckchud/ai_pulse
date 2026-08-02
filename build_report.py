@@ -3,6 +3,7 @@
 import argparse
 import html
 import io
+import json
 import re
 import sqlite3
 from datetime import datetime, timezone
@@ -45,6 +46,17 @@ _CHART_RENDERERS = {
     "cooccurrence": lambda rows, limit=None: _render_cooccurrence_chart(rows, limit=limit),
     "framing": lambda rows, limit=None: _render_framing_chart(rows, limit=limit),
 }
+
+
+def _serialize_report_data(report: dict) -> str:
+    payload = json.dumps(report, ensure_ascii=False, separators=(",", ":"))
+    return payload.replace("</", "<\\/")
+
+
+def _load_plotly_bundle() -> str:
+    return (Path(__file__).parent / "vendor" / "plotly-2.35.2.min.js").read_text(
+        encoding="utf-8"
+    )
 
 
 def _as_of(conn: sqlite3.Connection) -> str:
@@ -548,6 +560,8 @@ def render_report(report: dict) -> str:
     )
     prompt_versions = _metadata_values(metadata, "prompt_versions", PROMPT_VERSION)
     catalog_versions = _metadata_values(metadata, "catalog_versions", "기록 없음")
+    report_data = _serialize_report_data(report)
+    plotly_bundle = _load_plotly_bundle()
 
     trend_chart = _report_figure(
         _render_chart("timeseries", timeseries, limit=10),
@@ -610,6 +624,8 @@ details {{ background: #fff; border: 1px solid #d8dde3; padding: 14px; }} summar
 code {{ background: #edf2f7; padding: 1px 4px; }}
 @media (max-width: 760px) {{ main {{ padding: 20px 14px 40px; }} h1 {{ font-size: 1.75rem; }} .kpis, .chart-grid {{ grid-template-columns: 1fr; }} section {{ padding: 22px 0; }} }}
 </style>
+<script id="report-data" type="application/json">{report_data}</script>
+<script data-plotly-bundle="plotly-2.35.2">{plotly_bundle}</script>
 </head>
 <body>
 <main>

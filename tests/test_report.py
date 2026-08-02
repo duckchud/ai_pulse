@@ -1,10 +1,12 @@
 import json
 import re
 import sys
+from pathlib import Path
 
 import pandas as pd
 import pytest
 
+import build_report as report_module
 from build_report import (
     _render_chart,
     _render_cooccurrence_chart,
@@ -19,6 +21,16 @@ from build_report import (
 )
 from db import save_extraction, upsert_story_candidates
 from reference_data import import_catalog
+
+
+@pytest.fixture(autouse=True)
+def stub_plotly_bundle(monkeypatch):
+    """Keep HTML rendering tests independent of the 4.4 MB vendored bundle."""
+    monkeypatch.setattr(
+        report_module,
+        "_load_plotly_bundle",
+        lambda: "/* plotly-2.35.2: Plotly.newPlot test marker */",
+    )
 
 
 def _insert_story(conn, story_id="story-1", created_at="2026-07-14T10:00:00Z"):
@@ -162,6 +174,31 @@ def test_render_report_contains_reader_sections_and_no_notebook_ui(sample_report
     assert "관측 불충분" in html
 
 
+def test_render_report_embeds_html_safe_report_data(sample_report):
+    sample_report["metadata"]["as_of"] = "</script><script>alert(1)</script>"
+
+    rendered = render_report(sample_report)
+
+    assert '<script id="report-data" type="application/json">' in rendered
+    assert '"timeseries"' in rendered
+    assert "</script><script>alert(1)</script>" not in rendered
+    assert "<\\/script><script>alert(1)<\\/script>" in rendered
+
+
+def test_render_report_has_no_external_plotly_script(sample_report):
+    rendered = render_report(sample_report)
+
+    assert 'src="https://' not in rendered
+    assert "plotly-2.35.2" in rendered
+
+
+def test_external_plotly_bundle_is_pinned():
+    bundle_path = Path(report_module.__file__).parent / "vendor" / "plotly-2.35.2.min.js"
+
+    assert bundle_path.is_file()
+    assert "Plotly.newPlot" in bundle_path.read_text(encoding="utf-8")
+
+
 def test_render_report_separates_stale_extraction_freshness(sample_report):
     sample_report["framing"] = [{
         "group_label": "OpenAI/GPT",
@@ -204,10 +241,16 @@ def test_render_report_escapes_dynamic_text(sample_report):
     sample_report["metadata"]["as_of"] = "<unsafe>"
 
     html = render_report(sample_report)
+    visible_html = re.sub(
+        r'<script id="report-data" type="application/json">.*?</script>',
+        "",
+        html,
+        flags=re.DOTALL,
+    )
 
-    assert "<unsafe>" not in html
-    assert "&lt;unsafe&gt;" in html
-    assert "<script>alert(1)</script>" not in html
+    assert "<unsafe>" not in visible_html
+    assert "&lt;unsafe&gt;" in visible_html
+    assert "<script>alert(1)</script>" not in visible_html
 
 
 def test_render_report_assigns_document_unique_svg_ids(sample_report):
