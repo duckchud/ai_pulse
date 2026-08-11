@@ -612,12 +612,13 @@ def _summary_observations(report: dict) -> list[str]:
 
 
 def _chart_container(
-    chart_id: str, table_id: str, label: str, caption: str
+    chart_id: str, table_id: str | None, label: str, caption: str
 ) -> str:
+    described_by = f' aria-describedby="{html.escape(table_id)}"' if table_id else ""
     return (
         f'<figure class="evidence-chart"><div id="{chart_id}" '
         f'class="chart-target" role="img" aria-label="{html.escape(label)}" '
-        f'aria-describedby="{table_id}" aria-live="polite">{_empty_chart()}</div>'
+        f'{described_by} aria-live="polite">{_empty_chart()}</div>'
         f"<figcaption>{caption}</figcaption></figure>"
     )
 
@@ -652,7 +653,7 @@ def render_report(report: dict) -> str:
 
     trend_chart = _chart_container(
         "chart-timeseries",
-        "table-timeseries",
+        None,
         "모델 family별 주간 고유 story 추이 차트",
         f"최근 {lookback_days}일, {bucket_days}일 bucket의 family별 고유 story 수.",
     )
@@ -748,7 +749,6 @@ code {{ background: #edf2f7; padding: 1px 4px; }}
     <p class="muted">24시간 표는 모델 family별 <strong>최근 24시간 후보 story 수 - 직전 24시간 후보 story 수</strong>만 표시합니다. 양수는 증가, 음수는 감소이며, 한 story가 여러 family를 언급하면 family별로 각각 집계됩니다.</p>
     {trend_chart}
     {emerging_chart}
-    {_timeseries_table(timeseries)}
     {_emerging_table(emerging)}
     <p class="denominator">후보 경로 분모: 현재 catalog alias로 매칭된 수집 story입니다. 최근 {lookback_days}일 결과는 이 분모에 한정됩니다.</p>
   </section>

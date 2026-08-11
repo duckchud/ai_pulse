@@ -322,13 +322,14 @@ def test_render_report_chart_containers_are_not_inside_legacy_chart_grid(sample_
     assert "chart-grid" not in html
 
 
-def test_render_report_has_timeseries_and_emerging_companion_tables(sample_report):
+def test_render_report_keeps_emerging_companion_table_without_long_timeseries_table(sample_report):
     sample_report["emerging"] = [{"group_label": "OpenAI/GPT", "mention_delta": 3}]
 
     html = render_report(sample_report)
 
-    assert 'id="table-timeseries"' in html
     assert 'id="table-emerging"' in html
+    assert 'id="table-timeseries"' not in html
+    assert 'aria-describedby="table-timeseries"' not in html
 
 
 def test_emerging_table_prioritizes_difference_over_raw_counts(sample_report):
@@ -350,7 +351,7 @@ def test_emerging_table_prioritizes_difference_over_raw_counts(sample_report):
     assert "언급 증감" in html
 
 
-def test_empty_report_keeps_accessible_chart_fallbacks_tables_and_stale_warning(sample_report):
+def test_empty_report_keeps_accessible_chart_fallbacks_and_stale_warning(sample_report):
     sample_report.update({
         "timeseries": [],
         "emerging": [],
@@ -369,19 +370,24 @@ def test_empty_report_keeps_accessible_chart_fallbacks_tables_and_stale_warning(
         "framing": "모델 family별 story framing 차트",
     }
     table_headers = {
-        "timeseries": "bucket 시작(UTC)",
         "emerging": "언급 증감",
         "lineup": "최신성 가중치",
         "cooccurrence": "함께 언급된 story",
         "framing": "stance 원문 label",
     }
     for chart_key, label in chart_labels.items():
-        assert (
-            f'id="chart-{chart_key}" class="chart-target" role="img" '
-            f'aria-label="{label}" aria-describedby="table-{chart_key}"'
-        ) in html
-        assert f'id="table-{chart_key}"' in html
-        assert table_headers[chart_key] in html
+        described_by = (
+            f' aria-describedby="table-{chart_key}"'
+            if chart_key != "timeseries"
+            else ""
+        )
+        assert f'id="chart-{chart_key}"' in html
+        assert f'aria-label="{label}"' in html
+        if described_by:
+            assert described_by in html
+        if chart_key != "timeseries":
+            assert f'id="table-{chart_key}"' in html
+            assert table_headers[chart_key] in html
 
     assert html.count("해당 기준에서 관측된 결과 없음") >= 5
     assert "이전 extraction 기반 참고 분석" in html
@@ -400,9 +406,11 @@ def test_render_report_drops_malformed_section_values_and_keeps_fallbacks(sample
 
     html = render_report(sample_report)
 
-    for chart_key in ("timeseries", "emerging", "lineup", "cooccurrence", "framing"):
+    for chart_key in ("emerging", "lineup", "cooccurrence", "framing"):
         assert f'id="chart-{chart_key}"' in html
         assert f'id="table-{chart_key}"' in html
+    assert 'id="chart-timeseries"' in html
+    assert 'id="table-timeseries"' not in html
     assert html.count("해당 기준에서 관측된 결과 없음") >= 5
     assert "이전 extraction 기반 참고 분석" in html
     assert "GPT" in html
